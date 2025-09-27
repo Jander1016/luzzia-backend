@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -14,7 +14,7 @@ export class ContactsController {
   @ApiOperation({ summary: 'Crear un nuevo contacto' })
   @ApiCreatedResponse({ type: ContactResponseDto })
   @ApiResponse({ status: 409, description: 'El correo electrónico ya está registrado.' })
-  create(@Body() createContactDto: CreateContactDto) : Promise<ContactResponseDto> {
+  async create(@Body() createContactDto: CreateContactDto) : Promise<ContactResponseDto> {
     return this.contactsService.create(createContactDto);
   }
 

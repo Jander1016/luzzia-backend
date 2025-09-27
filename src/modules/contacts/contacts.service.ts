@@ -17,6 +17,12 @@ export class ContactsService {
   async create(createContactDto: CreateContactDto): Promise<Contact> {
     try{
 
+      const existingContact = await this.contactModel.findOne({ email: normalizedEmail(createContactDto.email) });
+      if (existingContact) {
+        this.logger.warn(`El correo electrónico ya está registrado. ${createContactDto.email}`);
+        throw new ConflictException('El correo electrónico ya está registrado.');
+      }
+
       const createdContact = new this.contactModel({
       ...createContactDto,
       email: normalizedEmail(createContactDto.email),

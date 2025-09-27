@@ -12,14 +12,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1/');
 
-  const config = new DocumentBuilder()
-    .setTitle('Luzzia API')
-    .setDescription('Luzzia API description')
-    .setVersion('1.0')
-    .addTag('prices')
-    .addTag('contacts')
-    .build();
-
   app.enableCors(
     {
       origin: '*',
@@ -29,9 +21,6 @@ async function bootstrap() {
     }
   );
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/documentation', app, document);
-
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -39,6 +28,15 @@ async function bootstrap() {
     }),
   )
 
+  const config = new DocumentBuilder()
+  .setTitle('Luzzia API')
+  .setDescription('Luzzia API description')
+  .setVersion('1.0')
+  .build();
+  
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/v1/documentation', app, document);
+  
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api/v1`);
 }

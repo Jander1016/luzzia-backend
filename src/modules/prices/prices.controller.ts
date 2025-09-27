@@ -4,7 +4,7 @@ import { PricesService } from './prices.service';
 import { PriceResponseDto } from './dto/response-price.dto';
 import { HistoryQueryDto } from './dto/history-query-price.dto';
 
-@ApiTags('prices')
+@ApiTags('Prices')
 @Controller('prices')
 export class PricesController {
   constructor(private readonly pricesService: PricesService) {}
