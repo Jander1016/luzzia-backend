@@ -20,6 +20,15 @@ async function bootstrap() {
     .addTag('contacts')
     .build();
 
+  app.enableCors(
+    {
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+    }
+  );
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1/documentation', app, document);
 
