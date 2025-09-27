@@ -5,6 +5,7 @@ import { ScheduleModule  } from '@nestjs/schedule';
 import { PricesModule } from './modules/prices/prices.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PricesCron } from './shared/cron/prices.cron';
+import { ContactsModule } from './modules/contacts/contacts.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { PricesCron } from './shared/cron/prices.cron';
     MongooseModule.forRoot(process.env.DB_URI),
     ScheduleModule.forRoot(),
     PricesModule,
+    ContactsModule,
   ],
   providers: [PricesCron],
 })

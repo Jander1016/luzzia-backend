@@ -7,16 +7,17 @@ import { Model } from 'mongoose';
 import { CreatePriceDto } from './dto/create-price.dto';
 import { catchError, firstValueFrom } from 'rxjs';
 import { PriceResponseDto } from './dto/response-price.dto';
+import { convertDate } from 'src/shared/common/utils';
 
-interface PvpcEntry {
-  date: string;   // fecha en formato YYYY-MM-DD
-  hour: string;
-  price: string;
-}
+// interface PvpcEntry {
+//   date: string;   // fecha en formato YYYY-MM-DD
+//   hour: string;
+//   price: string;
+// }
 
-export interface REEApiResponse {
-  PVPC: PvpcEntry[];
-}
+// export interface REEApiResponse {
+//   PVPC: PvpcEntry[];
+// }
 
 @Injectable()
 export class PricesService {
@@ -34,12 +35,6 @@ export class PricesService {
       throw new Error('Inválido formato de datos de API REE');
     }
 
-    const convertDate = (dateStr: string): string => {
-      const [dd, mm, yyyy] = dateStr.split('/');
-      return `${yyyy}-${mm}-${dd}`; // "2025-09-27"
-    };
-
-
     return reeData.PVPC.map((item: any) => {
       let date = new Date(item.Dia);
       const hour = parseInt(item.Hora.split('-')[0], 10);
@@ -47,12 +42,10 @@ export class PricesService {
 
       if (date.toString() === 'Invalid Date') {
         date = new Date(convertDate(item.Dia));
-      } else {
-        date = item.dia;
       }
 
       if (isNaN(hour) || isNaN(price)) {
-        this.logger.warn(`Invalid data format: ${JSON.stringify(item)}`);
+        this.logger.warn(`Formato de datos inválido: ${JSON.stringify(item)}`);
         return null;
       }
 
@@ -70,8 +63,8 @@ export class PricesService {
     const { data } = await firstValueFrom(
       this.httpService.get(apiUrl).pipe(
         catchError((error) => {
-          this.logger.error('Error fetching from REE API', error.stack);
-          throw new Error(`REE API error: ${error.message}`);
+          this.logger.error('Error fetching desde API REE', error.stack);
+          throw new Error(`API REE error: ${error.message}`);
         }),
       ),
     );
@@ -91,11 +84,11 @@ export class PricesService {
         );
         savedCount++;
       } catch (error) {
-        this.logger.error(`Error saving price for ${priceData.date} hour ${priceData.hour}`, error);
+        this.logger.error(`Error guardando el precio para ${priceData.date} hora ${priceData.hour}`, error);
       }
     }
 
-    this.logger.log(`Saved ${savedCount} prices`);
+    this.logger.log(`Se guardaron ${savedCount} precios nuevos.`);
     return savedCount;
   }
 

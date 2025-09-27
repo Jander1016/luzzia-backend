@@ -1,34 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import { CreateContactDto } from './dto/create-contact.dto';
-// import { UpdateContactDto } from './dto/update-contact.dto';
+import { ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ContactResponseDto } from './dto/contact-response.dto';
 
+@ApiTags('Contacts')
 @Controller('contacts')
 export class ContactsController {
   constructor(private readonly contactsService: ContactsService) {}
 
   @Post()
-  create(@Body() createContactDto: CreateContactDto) {
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear un nuevo contacto' })
+  @ApiCreatedResponse({ type: ContactResponseDto })
+  @ApiResponse({ status: 409, description: 'El correo electrónico ya está registrado.' })
+  create(@Body() createContactDto: CreateContactDto) : Promise<ContactResponseDto> {
     return this.contactsService.create(createContactDto);
   }
 
   @Get()
-  findAll() {
+  @ApiOperation({ summary: 'Obtener todos los contactos' })
+  @ApiResponse({ status: 200, type: [ContactResponseDto] })
+  async findAll(): Promise<ContactResponseDto[]> {
     return this.contactsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.contactsService.findOne(+id);
-  }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateContactDto: UpdateContactDto) {
-  //   return this.contactsService.update(+id, updateContactDto);
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.contactsService.findOne(id);
   // }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.contactsService.remove(+id);
-  }
 }
