@@ -32,6 +32,14 @@ export class PricesController {
     return this.pricesService.getPriceStats(days);
   }
 
+  @Get('dashboard/stats')
+  @ApiOperation({ summary: 'Obtener estadísticas para el dashboard' })
+  @ApiResponse({ status: 200 })
+  async getDashboardStats(): Promise<any> {
+    return this.pricesService.getDashboardStats();
+  }
+
+
   @Post('fetch')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Forzar actualización de precios' })

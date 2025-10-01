@@ -3,21 +3,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Price } from './entities/price.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
-import { Model } from 'mongoose';
+import { Model, now } from 'mongoose';
 import { CreatePriceDto } from './dto/create-price.dto';
 import { catchError, firstValueFrom } from 'rxjs';
 import { PriceResponseDto } from './dto/response-price.dto';
 import { convertDate } from 'src/shared/common/utils';
-
-// interface PvpcEntry {
-//   date: string;   // fecha en formato YYYY-MM-DD
-//   hour: string;
-//   price: string;
-// }
-
-// export interface REEApiResponse {
-//   PVPC: PvpcEntry[];
-// }
+import { DashboardStatsDto } from './dto/dashboard-stats';
 
 @Injectable()
 export class PricesService {
@@ -39,6 +30,12 @@ export class PricesService {
       let date = new Date(item.Dia);
       const hour = parseInt(item.Hora.split('-')[0], 10);
       const price = parseFloat(item.PCB) / 1000; // Convertir a €/kWh
+
+      console.log({
+        date: item.Dia,
+        hour: item.Hora,
+        price: item.PCB,
+      })
 
       if (date.toString() === 'Invalid Date') {
         date = new Date(convertDate(item.Dia));
@@ -91,24 +88,52 @@ export class PricesService {
     this.logger.log(`Se guardaron ${savedCount} precios nuevos.`);
     return savedCount;
   }
-
+  
   async getTodayPrices(): Promise<PriceResponseDto[]> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    try {
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(startOfDay);
+        endOfDay.setDate(endOfDay.getDate() + 1);
 
-    const prices = await this.priceModel
-      .find({ date: { $gte: today } })
-      .sort({ hour: 1 })
-      .exec();
+        console.log('🔍 Buscando precios para:', {
+            startOfDay: startOfDay.toISOString(),
+            endOfDay: endOfDay.toISOString(),
+            hoy: today.toISOString()
+        });
 
-    return prices.map(price => ({
-      date: price.date,
-      hour: price.hour,
-      price: price.price,
-      isFallback: false,
-      timestamp: price.timestamp
-    }));
-  }
+        const prices = await this.priceModel
+            .find({
+                timestamp: {
+                    $gte: startOfDay,
+                    $lt: endOfDay
+                }
+            })
+            .sort({ hour: 1 })
+            .exec();
+
+        console.log('📊 Precios encontrados:', prices.length);
+
+        if (prices.length === 0) {
+            console.warn('⚠️ No se encontraron precios para hoy. Verificar:');
+            console.warn('1. Si hay datos en la base de datos');
+            console.warn('2. El timezone de la aplicación');
+            console.warn('3. El formato de las fechas en MongoDB');
+        }
+
+        return prices.map(price => ({
+            date: price.date,
+            hour: price.hour,
+            price: price.price,
+            isFallback: false,
+            timestamp: price.timestamp
+        }));
+
+    } catch (error) {
+        console.error('❌ Error en getTodayPrices:', error);
+        throw error;
+    }
+}
 
   async getPriceHistory(days: number = 7): Promise<PriceResponseDto[]> {
     const startDate = new Date();
@@ -147,5 +172,31 @@ export class PricesService {
     ]);
 
     return stats;
+  }
+
+  async getDashboardStats(): Promise<DashboardStatsDto> {
+
+    const prices = await this.getTodayPrices();
+
+    if (prices.length === 0) {
+      throw new Error('No hay datos de precios disponibles para hoy.');
+    }
+    
+    const currentPrice = prices[0].price;
+    const nextHourPrice = prices[1]?.price || 0;
+    const priceChangePercentage = ((nextHourPrice - currentPrice) / currentPrice) * 100;
+    const monthlySavings = 10; // Estos datos, tiene que venir de algún cálculo o configuración
+    const comparisonType = 'tarifa fija'; // Este dato también debería venir de alguna configuración
+    const lastUpdated = new Date().toISOString();
+
+    return {
+      currentPrice,
+      nextHourPrice,
+      priceChangePercentage,
+      monthlySavings,
+      comparisonType,
+      lastUpdated
+    };
+
   }
 }
