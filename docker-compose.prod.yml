@@ -1,0 +1,193 @@
+# ============================================
+# 🐳 DOCKER COMPOSE ENTERPRISE - PRODUCCIÓN
+# Stack optimizado para despliegue en producción
+# ============================================
+version: '3.8'
+
+services:
+  # ============================================
+  # 🚀 LUZZIA BACKEND - Aplicación principal
+  # ============================================
+  luzzia-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: luzzia/backend:latest
+    container_name: luzzia-backend-prod
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DB_URI=${DB_URI}
+      - REE_API_URL=${REE_API_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-"15 20 * * *"}
+      - FALLBACK_RETRY_DELAY=${FALLBACK_RETRY_DELAY:-30}
+      - MAX_RETRIES=${MAX_RETRIES:-2}
+      - TZ=Europe/Madrid
+      - ENABLE_METRICS=true
+      - HEALTH_CHECK_TIMEOUT=5000
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - luzzia-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.luzzia-backend.rule=Host(`${API_DOMAIN:-api.luzzia.com}`)"
+      - "traefik.http.routers.luzzia-backend.tls=true"
+      - "traefik.http.routers.luzzia-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.luzzia-backend.loadbalancer.server.port=4000"
+      - "traefik.http.middlewares.luzzia-backend-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+
+  # ============================================
+  # 🔴 REDIS - Cache y sesiones (Producción)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: luzzia-redis-prod
+    restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - ./docker/redis-prod.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - luzzia-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================
+  # 📈 PROMETHEUS - Métricas y monitoreo
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: luzzia-prometheus-prod
+    restart: unless-stopped
+    volumes:
+      - prometheus_data:/prometheus
+      - ./docker/prometheus/prometheus-prod.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - luzzia-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================
+  # 🌐 TRAEFIK - Reverse proxy con SSL
+  # ============================================
+  traefik:
+    image: traefik:v3.0
+    container_name: luzzia-traefik-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/traefik/traefik-prod.yml:/etc/traefik/traefik.yml:ro
+      - traefik_certificates:/certificates
+    networks:
+      - luzzia-network
+    environment:
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DOMAIN:-traefik.luzzia.com}`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH}"
+
+# ============================================
+# 💾 VOLUMES - Persistencia de datos
+# ============================================
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  traefik_certificates:
+    driver: local
+
+# ============================================
+# 🌐 NETWORKS - Red interna segura
+# ============================================
+networks:
+  luzzia-network:
+    driver: bridge
+    name: luzzia-production
+    driver_opts:
+      com.docker.network.bridge.name: br-luzzia-prod

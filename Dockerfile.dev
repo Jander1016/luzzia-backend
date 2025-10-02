@@ -1,0 +1,46 @@
+# ============================================
+# 🚀 Dockerfile Simple - Testing Stack
+# ============================================
+FROM node:20-alpine
+
+# Variables de entorno
+ENV NODE_ENV=development
+ENV PORT=3000
+
+# Instalar herramientas básicas
+RUN apk add --no-cache curl dumb-init
+
+# Crear usuario no-root para seguridad
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# Configurar directorio de trabajo
+WORKDIR /usr/src/app
+
+# Cambiar permisos del directorio
+RUN chown -R nestjs:nodejs /usr/src/app
+
+# Instalar pnpm
+RUN npm install -g pnpm@latest
+
+USER nestjs
+
+# Copiar archivos de dependencias
+COPY --chown=nestjs:nodejs package.json pnpm-lock.yaml* ./
+
+# Instalar dependencias
+RUN pnpm install
+
+# Copiar código fuente
+COPY --chown=nestjs:nodejs . .
+
+# Exponer puerto
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Comando de inicio con dumb-init y modo desarrollo
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["pnpm", "run", "start:dev"]

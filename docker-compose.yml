@@ -1,0 +1,254 @@
+# ============================================
+# 🐳 DOCKER COMPOSE ENTERPRISE - DESARROLLO
+# Stack completo para desarrollo local
+# ============================================
+version: '3.8'
+
+services:
+  # ============================================
+  # 🚀 LUZZIA BACKEND - Aplicación principal
+  # ============================================
+  luzzia-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: luzzia-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_URI=mongodb://mongodb:27017/luzzia-dev
+      - REE_API_URL=https://api.esios.ree.es/archives/70/download_json?locale=es
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - CRON_SCHEDULE="15 20 * * *"
+      - FALLBACK_RETRY_DELAY=30
+      - MAX_RETRIES=2
+      - TZ=Europe/Madrid
+      - ENABLE_METRICS=true
+      - HEALTH_CHECK_TIMEOUT=5000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - luzzia-network
+    volumes:
+      # Para desarrollo con hot reload (opcional)
+      - ./src:/app/src:ro
+      - ./dist:/app/dist
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.luzzia-backend.rule=Host(`api.luzzia.local`)"
+      - "traefik.http.services.luzzia-backend.loadbalancer.server.port=4000"
+
+  # ============================================
+  # 🍃 MONGODB - Base de datos principal
+  # ============================================
+  mongodb:
+    image: mongo:7.0
+    container_name: luzzia-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=luzzia-secret
+      - MONGO_INITDB_DATABASE=luzzia-dev
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./docker/mongo-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - luzzia-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: --auth --bind_ip_all
+    labels:
+      - "traefik.enable=false"
+
+  # ============================================
+  # 🔴 REDIS - Cache y sesiones
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: luzzia-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=luzzia-cache-secret
+    volumes:
+      - redis_data:/data
+      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - luzzia-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass luzzia-cache-secret
+    labels:
+      - "traefik.enable=false"
+
+  # ============================================
+  # 📊 GRAFANA - Dashboard de métricas
+  # ============================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: luzzia-grafana-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=luzzia-grafana
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - luzzia-network
+    depends_on:
+      - prometheus
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.luzzia.local`)"
+
+  # ============================================
+  # 📈 PROMETHEUS - Métricas y monitoreo
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: luzzia-prometheus-dev
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - luzzia-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.luzzia.local`)"
+
+  # ============================================
+  # 🌐 TRAEFIK - Reverse proxy y load balancer
+  # ============================================
+  traefik:
+    image: traefik:v3.0
+    container_name: luzzia-traefik-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - luzzia-network
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.luzzia.local`)"
+
+  # ============================================
+  # 🧪 MONGODB EXPRESS - Admin UI para MongoDB
+  # ============================================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: luzzia-mongo-express-dev
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=luzzia-secret
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:luzzia-secret@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=luzzia-mongo
+    networks:
+      - luzzia-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`mongo.luzzia.local`)"
+
+  # ============================================
+  # 📋 REDIS COMMANDER - Admin UI para Redis
+  # ============================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: luzzia-redis-commander-dev
+    restart: unless-stopped
+    ports:
+      - "8082:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:luzzia-cache-secret
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=luzzia-redis
+    networks:
+      - luzzia-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-commander.rule=Host(`redis.luzzia.local`)"
+
+# ============================================
+# 💾 VOLUMES - Persistencia de datos
+# ============================================
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+
+# ============================================
+# 🌐 NETWORKS - Red interna
+# ============================================
+networks:
+  luzzia-network:
+    driver: bridge
+    name: luzzia-development

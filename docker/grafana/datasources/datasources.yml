@@ -1,0 +1,53 @@
+# ============================================
+# 📊 GRAFANA DATASOURCES - DESARROLLO
+# Configuración automática de fuentes de datos
+# ============================================
+
+apiVersion: 1
+
+datasources:
+  # ============================================
+  # 📈 PROMETHEUS - Métricas principales
+  # ============================================
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    basicAuth: false
+    jsonData:
+      timeInterval: "5s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+    version: 1
+
+  # ============================================
+  # 🔴 REDIS - Métricas de cache
+  # ============================================
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://redis:6379
+    editable: true
+    basicAuth: false
+    secureJsonData:
+      password: "luzzia-cache-secret"
+    jsonData:
+      client: "standalone"
+      poolSize: 5
+      timeout: 10
+      pingInterval: 0
+      pipelineWindow: 0
+    version: 1
+
+  # ============================================
+  # 🍃 MONGODB - Logs y métricas de BD (futuro)
+  # ============================================
+  # - name: MongoDB
+  #   type: mongodb-datasource
+  #   access: proxy
+  #   url: mongodb://luzzia_app:luzzia_app_password@mongodb:27017/luzzia-dev
+  #   editable: true
+  #   basicAuth: false
+  #   version: 1

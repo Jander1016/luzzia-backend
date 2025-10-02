@@ -1,0 +1,35 @@
+# ============================================
+# 📊 GRAFANA DASHBOARD PROVISIONING
+# Configuración automática de dashboards
+# ============================================
+
+apiVersion: 1
+
+providers:
+  # ============================================
+  # 📈 LUZZIA DASHBOARDS
+  # ============================================
+  - name: 'Luzzia Dashboards'
+    orgId: 1
+    folder: 'Luzzia'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+
+  # ============================================
+  # 🔧 SYSTEM DASHBOARDS
+  # ============================================
+  - name: 'System Monitoring'
+    orgId: 1
+    folder: 'System'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/system
