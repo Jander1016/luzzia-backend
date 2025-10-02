@@ -3,7 +3,7 @@ import { CreateContactDto } from './dto/create-contact.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Contact } from './entities/contact.entity';
-import { normalizedEmail } from 'src/shared/common/utils';
+import { normalizedEmail } from '../../shared/common/utils';
 
 @Injectable()
 export class ContactsService {
