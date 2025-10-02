@@ -54,3 +54,14 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Documentation files (except README.md)
+API_DOCUMENTATION.md
+PRESENTATION.md
+IMPROVEMENTS.md
+DOCKER.md
+README_ORIGINAL.md
+
+# Docker development files
+.dockerignore.bak
+docker-compose.override.yml
