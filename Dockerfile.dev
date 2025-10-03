@@ -1,28 +1,42 @@
 # ============================================
-# 🚀 Dockerfile Simple - Testing Stack
+# 🚀 Dockerfile Development - Optimizado
 # ============================================
 FROM node:20-alpine
 
 # Variables de entorno
 ENV NODE_ENV=development
-ENV PORT=3000
+ENV PORT=4000
+ENV TZ=Europe/Madrid
 
-# Instalar herramientas básicas
-RUN apk add --no-cache curl dumb-init
+# Instalar herramientas necesarias
+RUN apk update && \
+    apk add --no-cache \
+        curl \
+        dumb-init \
+        python3 \
+        make \
+        g++ \
+        tzdata && \
+    rm -rf /var/cache/apk/*
+
+# Configurar timezone
+RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
 
 # Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # Configurar directorio de trabajo
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # Cambiar permisos del directorio
-RUN chown -R nestjs:nodejs /usr/src/app
+RUN chown -R nestjs:nodejs /app
 
-# Instalar pnpm
+# Instalar pnpm globalmente
 RUN npm install -g pnpm@latest
 
+# Cambiar a usuario no-root
 USER nestjs
 
 # Copiar archivos de dependencias
@@ -35,11 +49,11 @@ RUN pnpm install
 COPY --chown=nestjs:nodejs . .
 
 # Exponer puerto
-EXPOSE 3000
+EXPOSE $PORT
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:$PORT/api/health || exit 1
 
 # Comando de inicio con dumb-init y modo desarrollo
 ENTRYPOINT ["dumb-init", "--"]
