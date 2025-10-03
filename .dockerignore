@@ -48,6 +48,33 @@ secrets/
 *.swo
 *~
 .DS_Store
+
+# ============================================
+# 🧪 TESTING & DEVELOPMENT
+# ============================================
+test-*.js
+*.test.js
+*.spec.js
+jest.config.js
+.jest/
+
+# ============================================
+# 📚 DOCUMENTATION & README
+# ============================================
+*.md
+!README.md
+docs/
+IMPROVEMENTS.md
+PRESENTATION.md
+API_DOCUMENTATION.md
+DOCKER.md
+
+# ============================================
+# 🐳 DOCKER FILES (exclude from context)
+# ============================================
+Dockerfile*
+docker-compose*
+.dockerignore
 Thumbs.db
 
 # ============================================
