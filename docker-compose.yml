@@ -24,7 +24,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
-      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002
       - CRON_SCHEDULE="15 20 * * *"
       - FALLBACK_RETRY_DELAY=30
       - MAX_RETRIES=2
