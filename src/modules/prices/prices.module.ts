@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { HttpModule } from '@nestjs/axios';
 import { PricesService } from './prices.service';
 import { PricesController } from './prices.controller';
-import { PricesGateway } from './prices.gateway';
 import { Price, PriceSchema } from './entities/price.entity';
 import { PriceRepository } from './repositories/price.repository';
 
@@ -13,7 +12,7 @@ import { PriceRepository } from './repositories/price.repository';
     HttpModule,
   ],
   controllers: [PricesController],
-  providers: [PricesService, PricesGateway, PriceRepository],
+  providers: [PricesService, PriceRepository],
   exports: [PricesService, PriceRepository],
 })
 export class PricesModule {}
