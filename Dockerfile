@@ -21,7 +21,7 @@ COPY . .
 RUN pnpm build
 
 # Production image
-FROM node:lts-alpine3.22 AS runner
+FROM node:lts-alpine3.22 AS run
 WORKDIR /app
 ENV NODE_ENV=production
 RUN npm install -g pnpm@latest
