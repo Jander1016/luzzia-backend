@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Price } from './entities/price.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
@@ -12,8 +12,6 @@ import { DashboardStatsDto } from './dto/dashboard-stats';
 import { HourlyPricesResponseDto, HourlyPriceDto } from './dto/hourly-prices.dto';
 import { RecommendationsResponseDto, RecommendationDto } from './dto/recommendations.dto';
 import { PriceRepository } from './repositories/price.repository';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 
 @Injectable()
 export class PricesService {
@@ -25,7 +23,6 @@ export class PricesService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly priceRepository: PriceRepository,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) { }
 
   private transformREEData(reeData: any): CreatePriceDto[] {
@@ -34,28 +31,47 @@ export class PricesService {
     }
 
     return reeData.PVPC.map((item: any) => {
-      let date = new Date(item.Dia);
+      // Procesar fecha - REE envía formato DD/MM/YYYY
+      let date: Date;
+      
+      try {
+        if (item.Dia.includes('/')) {
+          // Formato DD/MM/YYYY - usar convertDate helper
+          const convertedDateStr = convertDate(item.Dia); // Convierte a YYYY-MM-DD
+          date = new Date(convertedDateStr + 'T00:00:00.000Z'); // UTC para evitar timezone issues
+        } else {
+          // Formato ISO o YYYY-MM-DD
+          date = new Date(item.Dia + 'T00:00:00.000Z');
+        }
+      } catch (error) {
+        this.logger.error(`Error parseando fecha ${item.Dia}:`, error);
+        return null;
+      }
+
       const hour = parseInt(item.Hora.split('-')[0], 10);
       const price = parseFloat(item.PCB) / 1000; // Convertir a €/kWh
 
       this.logger.debug('Processing REE data item', {
-        date: item.Dia,
+        originalDate: item.Dia,
+        parsedDate: date.toISOString(),
         hour: item.Hora,
-        price: item.PCB,
+        parsedHour: hour,
+        originalPrice: item.PCB,
+        finalPrice: price,
       });
 
-      if (date.toString() === 'Invalid Date') {
-        date = new Date(convertDate(item.Dia));
-      }
-
-      if (isNaN(hour) || isNaN(price)) {
+      if (isNaN(hour) || isNaN(price) || hour < 0 || hour > 23) {
         this.logger.warn(`Formato de datos inválido: ${JSON.stringify(item)}`);
         return null;
       }
 
-      return { date, hour, price };
+      return { 
+        date, 
+        hour, 
+        price,
+        isFallback: false // Datos reales de la API
+      };
     }).filter(Boolean);
-
   }
 
 
@@ -97,24 +113,13 @@ export class PricesService {
   }
 
   async getTodayPrices(): Promise<PriceResponseDto[]> {
-    const cacheKey = 'today-prices';
-    
     try {
-      // Intentar obtener del cache primero
-      const cachedPrices = await this.cacheManager.get<PriceResponseDto[]>(cacheKey);
-      if (cachedPrices) {
-        this.logger.log('📥 Returning cached today prices');
-        return cachedPrices;
-      }
-
-      // Si no está en cache, obtener de la base de datos
+      this.logger.log('Obteniendo precios de hoy');
+      this.logger.debug('STACK TRACE:', new Error().stack);
       const prices = await this.priceRepository.findTodayPrices();
       
       if (prices.length === 0) {
-        this.logger.warn('⚠️ No se encontraron precios para hoy. Verificar:');
-        this.logger.warn('1. Si hay datos en la base de datos');
-        this.logger.warn('2. El timezone de la aplicación');
-        this.logger.warn('3. El formato de las fechas en MongoDB');
+        this.logger.warn('No se encontraron precios para hoy');
       }
 
       const result = prices.map(price => ({
@@ -125,14 +130,36 @@ export class PricesService {
         timestamp: price.timestamp
       }));
 
-      // Guardar en cache por 5 minutos
-      await this.cacheManager.set(cacheKey, result, 300000);
-      this.logger.log(`📦 Cached ${result.length} today prices`);
+      return result;
+
+    } catch (error) {
+      this.logger.error('Error en getTodayPrices:', error);
+      throw error;
+    }
+  }
+
+  async getTomorrowPrices(): Promise<PriceResponseDto[]> {
+    try {
+      // Obtener directamente de la base de datos
+      const prices = await this.priceRepository.findTomorrowPrices();
+      
+      if (prices.length === 0) {
+        this.logger.warn('⚠️ No se encontraron precios para mañana.');
+        this.logger.log('💡 Los precios de mañana normalmente se publican sobre las 20:30h');
+      }
+
+      const result = prices.map(price => ({
+        date: price.date,
+        hour: price.hour,
+        price: price.price,
+        isFallback: false,
+        timestamp: price.timestamp
+      }));
 
       return result;
 
     } catch (error) {
-      this.logger.error('❌ Error en getTodayPrices:', error);
+      this.logger.error('❌ Error en getTomorrowPrices:', error);
       throw error;
     }
   }
@@ -178,7 +205,12 @@ export class PricesService {
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
 
-    const prices = await this.getTodayPrices();
+    // Datos mock temporales para debugging
+    const mockPrices = [
+      { price: 0.15, hour: 14 },
+      { price: 0.18, hour: 15 }
+    ];
+    const prices = mockPrices as any[];
 
     if (prices.length === 0) {
       throw new Error('No hay datos de precios disponibles para hoy.');
