@@ -27,28 +27,29 @@ export class HealthController {
     return this.health.check([
       // Verificar conexión a MongoDB
       () => this.mongoose.pingCheck('database'),
-      
+
       // Verificar uso de memoria (máximo 512MB)
       () => this.memory.checkHeap('memory_heap', 512 * 1024 * 1024),
-      
+
       // Verificar uso de memoria RSS (máximo 1GB)
       () => this.memory.checkRSS('memory_rss', 1024 * 1024 * 1024),
-      
+
       // Verificar espacio en disco (mínimo 1GB libre)
-      () => this.disk.checkStorage('storage', {
-        path: '/',
-        thresholdPercent: 0.9, // 90% utilizado como máximo
-      }),
+      () =>
+        this.disk.checkStorage('storage', {
+          path: '/',
+          thresholdPercent: 0.9, // 90% utilizado como máximo
+        }),
     ]);
   }
 
   @Get('readiness')
-  @ApiOperation({ summary: 'Verificar si la aplicación está lista para recibir tráfico' })
+  @ApiOperation({
+    summary: 'Verificar si la aplicación está lista para recibir tráfico',
+  })
   @HealthCheck()
   readiness() {
-    return this.health.check([
-      () => this.mongoose.pingCheck('database'),
-    ]);
+    return this.health.check([() => this.mongoose.pingCheck('database')]);
   }
 
   @Get('liveness')

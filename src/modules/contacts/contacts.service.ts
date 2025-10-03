@@ -8,30 +8,36 @@ import { normalizedEmail } from '../../shared/common/utils';
 @Injectable()
 export class ContactsService {
   private readonly logger = new Logger(ContactsService.name);
-  
-  constructor(
-    @InjectModel('Contact') private contactModel: Model<Contact>,
 
-  ) {}
+  constructor(@InjectModel('Contact') private contactModel: Model<Contact>) {}
 
   async create(createContactDto: CreateContactDto): Promise<Contact> {
-    try{
-
-      const existingContact = await this.contactModel.findOne({ email: normalizedEmail(createContactDto.email) });
+    try {
+      const existingContact = await this.contactModel.findOne({
+        email: normalizedEmail(createContactDto.email),
+      });
       if (existingContact) {
-        this.logger.warn(`El correo electrónico ya está registrado. ${createContactDto.email}`);
-        throw new ConflictException('El correo electrónico ya está registrado.');
+        this.logger.warn(
+          `El correo electrónico ya está registrado. ${createContactDto.email}`,
+        );
+        throw new ConflictException(
+          'El correo electrónico ya está registrado.',
+        );
       }
 
       const createdContact = new this.contactModel({
-      ...createContactDto,
-      email: normalizedEmail(createContactDto.email),
+        ...createContactDto,
+        email: normalizedEmail(createContactDto.email),
       });
       return await createdContact.save();
-    }catch (error) {
+    } catch (error) {
       if (error.code === 11000) {
-        this.logger.warn(`El correo electrónico ya está registrado. ${createContactDto.email}`);
-        throw new ConflictException('El correo electrónico ya está registrado.');
+        this.logger.warn(
+          `El correo electrónico ya está registrado. ${createContactDto.email}`,
+        );
+        throw new ConflictException(
+          'El correo electrónico ya está registrado.',
+        );
       }
       this.logger.error('Error al crear el contacto', error);
       throw error;
@@ -45,6 +51,4 @@ export class ContactsService {
   // findOne(id: string) {
   //   return this.contactModel.findById(id).exec();
   // }
-
-  
 }

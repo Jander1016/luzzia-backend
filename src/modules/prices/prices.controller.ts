@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PricesService } from './prices.service';
 import { PriceResponseDto } from './dto/response-price.dto';
@@ -30,7 +37,9 @@ export class PricesController {
   @ApiOperation({ summary: 'Obtener histórico de precios' })
   @ApiQuery({ name: 'days', required: false, type: Number })
   @ApiResponse({ status: 200, type: [PriceResponseDto] })
-  async getHistory(@Query() query: HistoryQueryDto): Promise<PriceResponseDto[]> {
+  async getHistory(
+    @Query() query: HistoryQueryDto,
+  ): Promise<PriceResponseDto[]> {
     return this.pricesService.getPriceHistory(query.days);
   }
 
@@ -51,14 +60,16 @@ export class PricesController {
 
   @Get('hourly')
   @ApiOperation({ summary: 'Obtener precios por horas según período' })
-  @ApiQuery({ 
-    name: 'period', 
-    required: false, 
+  @ApiQuery({
+    name: 'period',
+    required: false,
     enum: ['today', 'week', 'month'],
-    description: 'Período para obtener precios por horas'
+    description: 'Período para obtener precios por horas',
   })
   @ApiResponse({ status: 200, type: HourlyPricesResponseDto })
-  async getHourlyPrices(@Query('period') period: 'today' | 'week' | 'month' = 'today'): Promise<HourlyPricesResponseDto> {
+  async getHourlyPrices(
+    @Query('period') period: 'today' | 'week' | 'month' = 'today',
+  ): Promise<HourlyPricesResponseDto> {
     return this.pricesService.getHourlyPrices(period);
   }
 
@@ -69,18 +80,20 @@ export class PricesController {
     return this.pricesService.getRecommendations();
   }
 
-
   @Post('fetch')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Forzar actualización de precios' })
-  @ApiResponse({ status: 200, description: 'Precios actualizados correctamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Precios actualizados correctamente',
+  })
   async fetchPrices(): Promise<{ message: string; saved: number }> {
     const prices = await this.pricesService.fetchFromExternalApi();
     const savedCount = await this.pricesService.savePrices(prices);
-    
-    return { 
-      message: 'Prices updated successfully', 
-      saved: savedCount 
+
+    return {
+      message: 'Prices updated successfully',
+      saved: savedCount,
     };
   }
 }

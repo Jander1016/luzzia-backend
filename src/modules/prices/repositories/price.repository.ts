@@ -23,33 +23,34 @@ export class PriceRepository {
     filter: any,
     update: Partial<CreatePriceDto>,
   ): Promise<Price> {
-    return this.priceModel.findOneAndUpdate(
-      filter,
-      { ...update, timestamp: new Date() },
-      { upsert: true, new: true },
-    ).exec();
+    return this.priceModel
+      .findOneAndUpdate(
+        filter,
+        { ...update, timestamp: new Date() },
+        { upsert: true, new: true },
+      )
+      .exec();
   }
 
   async findTodayPrices(): Promise<Price[]> {
     // Obtener fecha actual en UTC para coincidir con cómo se guardan los datos
     const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const today = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
     const tomorrow = new Date(today);
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    
+
     const query = {
       date: {
         $gte: today,
-        $lt: tomorrow
-      }
+        $lt: tomorrow,
+      },
     };
-    
+
     // Buscar por fecha del precio, no por timestamp de guardado
-    const result = await this.priceModel
-      .find(query)
-      .sort({ hour: 1 })
-      .exec();
-      
+    const result = await this.priceModel.find(query).sort({ hour: 1 }).exec();
+
     return result;
   }
 
@@ -57,17 +58,19 @@ export class PriceRepository {
     // Obtener fecha de mañana en UTC para coincidir con cómo se guardan los datos
     const now = new Date();
     // CORREGIDO: Usar Date.UTC para crear fechas UTC correctas
-    const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-    
+    const tomorrow = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+    );
+
     const dayAfterTomorrow = new Date(tomorrow);
     dayAfterTomorrow.setUTCDate(dayAfterTomorrow.getUTCDate() + 1); // +1 día en UTC
-    
+
     return this.priceModel
       .find({
         date: {
           $gte: tomorrow,
-          $lt: dayAfterTomorrow
-        }
+          $lt: dayAfterTomorrow,
+        },
       })
       .sort({ hour: 1 })
       .exec();
@@ -148,7 +151,9 @@ export class PriceRepository {
       .exec();
   }
 
-  async findMinMaxPricesForDate(date: Date): Promise<{ min: Price; max: Price } | null> {
+  async findMinMaxPricesForDate(
+    date: Date,
+  ): Promise<{ min: Price; max: Price } | null> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(startOfDay);

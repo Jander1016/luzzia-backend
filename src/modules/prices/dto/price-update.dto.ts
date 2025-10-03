@@ -3,12 +3,12 @@ import { ApiProperty } from '@nestjs/swagger';
 export class PriceUpdateDto {
   @ApiProperty({
     description: 'Event type',
-    example: 'price_update'
+    example: 'price_update',
   })
   type: string;
 
   @ApiProperty({
-    description: 'Price update data'
+    description: 'Price update data',
   })
   data: {
     currentPrice: number;

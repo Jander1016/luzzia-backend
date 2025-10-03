@@ -44,7 +44,7 @@ describe('PricesController', () => {
       },
     ],
     average: 0.12,
-    min: 0.10,
+    min: 0.1,
     max: 0.15,
   };
 
@@ -77,10 +77,12 @@ describe('PricesController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [
-        ThrottlerModule.forRoot([{
-          ttl: 60000,
-          limit: 10,
-        }]),
+        ThrottlerModule.forRoot([
+          {
+            ttl: 60000,
+            limit: 10,
+          },
+        ]),
       ],
       controllers: [PricesController],
       providers: [
@@ -109,9 +111,13 @@ describe('PricesController', () => {
     });
 
     it('should handle service errors', async () => {
-      mockPricesService.getTodayPrices.mockRejectedValue(new Error('Service error'));
+      mockPricesService.getTodayPrices.mockRejectedValue(
+        new Error('Service error'),
+      );
 
-      await expect(controller.getTodayPrices()).rejects.toThrow('Service error');
+      await expect(controller.getTodayPrices()).rejects.toThrow(
+        'Service error',
+      );
     });
   });
 
@@ -139,7 +145,7 @@ describe('PricesController', () => {
 
   describe('getStats', () => {
     it('should return price stats with default days', async () => {
-      const mockStats = { avg: 0.12, min: 0.10, max: 0.15 };
+      const mockStats = { avg: 0.12, min: 0.1, max: 0.15 };
       mockPricesService.getPriceStats.mockResolvedValue(mockStats);
 
       const result = await controller.getStats(undefined);
@@ -149,7 +155,7 @@ describe('PricesController', () => {
     });
 
     it('should return price stats with specified days', async () => {
-      const mockStats = { avg: 0.12, min: 0.10, max: 0.15 };
+      const mockStats = { avg: 0.12, min: 0.1, max: 0.15 };
       mockPricesService.getPriceStats.mockResolvedValue(mockStats);
 
       const result = await controller.getStats(7);
@@ -201,7 +207,9 @@ describe('PricesController', () => {
 
   describe('getRecommendations', () => {
     it('should return price recommendations', async () => {
-      mockPricesService.getRecommendations.mockResolvedValue(mockRecommendations);
+      mockPricesService.getRecommendations.mockResolvedValue(
+        mockRecommendations,
+      );
 
       const result = await controller.getRecommendations();
 
@@ -227,7 +235,9 @@ describe('PricesController', () => {
     });
 
     it('should handle fetch errors', async () => {
-      mockPricesService.fetchFromExternalApi.mockRejectedValue(new Error('Fetch error'));
+      mockPricesService.fetchFromExternalApi.mockRejectedValue(
+        new Error('Fetch error'),
+      );
 
       await expect(controller.fetchPrices()).rejects.toThrow('Fetch error');
     });

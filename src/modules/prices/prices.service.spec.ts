@@ -83,7 +83,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
       const result = await service.getTodayPrices();
@@ -99,7 +99,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue([]),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
       const result = await service.getTodayPrices();
@@ -112,7 +112,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockRejectedValue(new Error('Database error')),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
       await expect(service.getTodayPrices()).rejects.toThrow('Database error');
@@ -153,7 +153,7 @@ describe('PricesService', () => {
       mockHttpService.get.mockReturnValue(
         of(null).pipe(() => {
           throw new Error('API Error');
-        })
+        }),
       );
 
       await expect(service.fetchFromExternalApi()).rejects.toThrow();
@@ -168,7 +168,9 @@ describe('PricesService', () => {
 
       mockHttpService.get.mockReturnValue(of(invalidResponse));
 
-      await expect(service.fetchFromExternalApi()).rejects.toThrow('Inválido formato de datos de API REE');
+      await expect(service.fetchFromExternalApi()).rejects.toThrow(
+        'Inválido formato de datos de API REE',
+      );
     });
   });
 
@@ -178,7 +180,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
       const result = await service.getDashboardStats();
@@ -196,10 +198,12 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue([]),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
-      await expect(service.getDashboardStats()).rejects.toThrow('No hay datos de precios disponibles para hoy.');
+      await expect(service.getDashboardStats()).rejects.toThrow(
+        'No hay datos de precios disponibles para hoy.',
+      );
     });
   });
 
@@ -209,7 +213,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
       const result = await service.getHourlyPrices('today');
@@ -226,7 +230,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue([]),
       };
-      
+
       mockPriceModel.find.mockReturnValue(mockQuery);
 
       const result = await service.getHourlyPrices('today');
@@ -254,11 +258,11 @@ describe('PricesService', () => {
     });
 
     it('should handle save errors gracefully', async () => {
-      const mockPrices = [
-        { date: new Date(), hour: 0, price: 0.12 },
-      ];
+      const mockPrices = [{ date: new Date(), hour: 0, price: 0.12 }];
 
-      mockPriceModel.findOneAndUpdate.mockRejectedValue(new Error('Save error'));
+      mockPriceModel.findOneAndUpdate.mockRejectedValue(
+        new Error('Save error'),
+      );
 
       const result = await service.savePrices(mockPrices);
 

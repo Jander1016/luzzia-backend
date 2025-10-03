@@ -8,7 +8,7 @@ export class PaginationDto {
     example: 1,
     minimum: 1,
     required: false,
-    default: 1
+    default: 1,
   })
   @IsOptional()
   @Type(() => Number)
@@ -22,7 +22,7 @@ export class PaginationDto {
     minimum: 1,
     maximum: 100,
     required: false,
-    default: 10
+    default: 10,
   })
   @IsOptional()
   @Type(() => Number)
@@ -34,12 +34,12 @@ export class PaginationDto {
 
 export class PaginatedResponseDto<T> {
   @ApiProperty({
-    description: 'Array de datos'
+    description: 'Array de datos',
   })
   data: T[];
 
   @ApiProperty({
-    description: 'Información de paginación'
+    description: 'Información de paginación',
   })
   pagination: {
     page: number;

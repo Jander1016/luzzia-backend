@@ -1,7 +1,6 @@
-import { IsEmail, IsNotEmpty,  MaxLength, MinLength } from "class-validator";
+import { IsEmail, IsNotEmpty, MaxLength, MinLength } from 'class-validator';
 
 export class CreateContactDto {
-
   @IsNotEmpty()
   @MinLength(4)
   name: string;

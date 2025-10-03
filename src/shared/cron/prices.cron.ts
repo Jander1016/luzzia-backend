@@ -33,12 +33,11 @@ export class PricesCron {
     try {
       const prices = await this.pricesService.fetchFromExternalApi();
       const savedCount = await this.pricesService.savePrices(prices);
-      
+
       this.logger.log(`Successfully saved ${savedCount} prices`);
-      
     } catch (error) {
       this.logger.error(`Price update failed: ${error.message}`);
-      
+
       // Si es el reintento de las 23:15 y falla, usar datos anteriores
       if (this.hasRetried) {
         await this.usePreviousDayData();
@@ -48,17 +47,17 @@ export class PricesCron {
 
   private async usePreviousDayData(): Promise<void> {
     this.logger.warn('Using previous day data as fallback');
-    
+
     try {
-      const lastPrices = await this.pricesService.getPriceHistory(2); 
-      
+      const lastPrices = await this.pricesService.getPriceHistory(2);
+
       if (lastPrices.length > 0) {
         const pricesByDate = this.groupByDate(lastPrices);
         const latestDate = Object.keys(pricesByDate).sort().reverse()[0];
         const latestPrices = pricesByDate[latestDate];
 
         const today = new Date();
-        const fallbackPrices = latestPrices.map(price => ({
+        const fallbackPrices = latestPrices.map((price) => ({
           date: today,
           hour: price.hour,
           price: price.price,

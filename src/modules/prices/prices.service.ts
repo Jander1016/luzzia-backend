@@ -9,13 +9,18 @@ import { catchError, firstValueFrom } from 'rxjs';
 import { PriceResponseDto } from './dto/response-price.dto';
 import { convertDate } from '../../shared/common/utils';
 import { DashboardStatsDto } from './dto/dashboard-stats';
-import { HourlyPricesResponseDto, HourlyPriceDto } from './dto/hourly-prices.dto';
-import { RecommendationsResponseDto, RecommendationDto } from './dto/recommendations.dto';
+import {
+  HourlyPricesResponseDto,
+  HourlyPriceDto,
+} from './dto/hourly-prices.dto';
+import {
+  RecommendationsResponseDto,
+  RecommendationDto,
+} from './dto/recommendations.dto';
 import { PriceRepository } from './repositories/price.repository';
 
 @Injectable()
 export class PricesService {
-
   private readonly logger = new Logger(PricesService.name);
 
   constructor(
@@ -23,7 +28,7 @@ export class PricesService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly priceRepository: PriceRepository,
-  ) { }
+  ) {}
 
   private transformREEData(reeData: any): CreatePriceDto[] {
     if (!reeData?.PVPC) {
@@ -33,7 +38,7 @@ export class PricesService {
     return reeData.PVPC.map((item: any) => {
       // Procesar fecha - REE envía formato DD/MM/YYYY
       let date: Date;
-      
+
       try {
         if (item.Dia.includes('/')) {
           // Formato DD/MM/YYYY - usar convertDate helper
@@ -65,15 +70,14 @@ export class PricesService {
         return null;
       }
 
-      return { 
-        date, 
-        hour, 
+      return {
+        date,
+        hour,
         price,
-        isFallback: false // Datos reales de la API
+        isFallback: false, // Datos reales de la API
       };
     }).filter(Boolean);
   }
-
 
   async fetchFromExternalApi(): Promise<CreatePriceDto[]> {
     const apiUrl = this.configService.get<string>('reeApiUrl');
@@ -104,7 +108,10 @@ export class PricesService {
         );
         savedCount++;
       } catch (error) {
-        this.logger.error(`Error guardando el precio para ${priceData.date} hora ${priceData.hour}`, error);
+        this.logger.error(
+          `Error guardando el precio para ${priceData.date} hora ${priceData.hour}`,
+          error,
+        );
       }
     }
 
@@ -117,21 +124,20 @@ export class PricesService {
       this.logger.log('Obteniendo precios de hoy');
       this.logger.debug('STACK TRACE:', new Error().stack);
       const prices = await this.priceRepository.findTodayPrices();
-      
+
       if (prices.length === 0) {
         this.logger.warn('No se encontraron precios para hoy');
       }
 
-      const result = prices.map(price => ({
+      const result = prices.map((price) => ({
         date: price.date,
         hour: price.hour,
         price: price.price,
         isFallback: false,
-        timestamp: price.timestamp
+        timestamp: price.timestamp,
       }));
 
       return result;
-
     } catch (error) {
       this.logger.error('Error en getTodayPrices:', error);
       throw error;
@@ -142,22 +148,23 @@ export class PricesService {
     try {
       // Obtener directamente de la base de datos
       const prices = await this.priceRepository.findTomorrowPrices();
-      
+
       if (prices.length === 0) {
         this.logger.warn('⚠️ No se encontraron precios para mañana.');
-        this.logger.log('💡 Los precios de mañana normalmente se publican sobre las 20:30h');
+        this.logger.log(
+          '💡 Los precios de mañana normalmente se publican sobre las 20:30h',
+        );
       }
 
-      const result = prices.map(price => ({
+      const result = prices.map((price) => ({
         date: price.date,
         hour: price.hour,
         price: price.price,
         isFallback: false,
-        timestamp: price.timestamp
+        timestamp: price.timestamp,
       }));
 
       return result;
-
     } catch (error) {
       this.logger.error('❌ Error en getTomorrowPrices:', error);
       throw error;
@@ -174,12 +181,12 @@ export class PricesService {
       .sort({ date: -1, hour: 1 })
       .exec();
 
-    return prices.map(price => ({
+    return prices.map((price) => ({
       date: price.date,
       hour: price.hour,
       price: price.price,
       isFallback: false,
-      timestamp: price.timestamp
+      timestamp: price.timestamp,
     }));
   }
 
@@ -204,32 +211,36 @@ export class PricesService {
   }
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
-
     // Datos mock temporales para debugging
     const mockPrices = [
       { price: 0.15, hour: 14 },
-      { price: 0.18, hour: 15 }
+      { price: 0.18, hour: 15 },
     ];
     const prices = mockPrices as any[];
 
     if (prices.length === 0) {
       throw new Error('No hay datos de precios disponibles para hoy.');
     }
-    
+
     const currentHour = new Date().getHours();
-    const currentPriceData = prices.find(p => p.hour === currentHour) || prices[0];
-    const nextHourPriceData = prices.find(p => p.hour === currentHour + 1) || prices[1];
-    
+    const currentPriceData =
+      prices.find((p) => p.hour === currentHour) || prices[0];
+    const nextHourPriceData =
+      prices.find((p) => p.hour === currentHour + 1) || prices[1];
+
     const currentPrice = currentPriceData.price;
     const nextHourPrice = nextHourPriceData?.price || 0;
-    const priceChangePercentage = nextHourPrice > 0 ? 
-      ((nextHourPrice - currentPrice) / currentPrice) * 100 : 0;
-    
+    const priceChangePercentage =
+      nextHourPrice > 0
+        ? ((nextHourPrice - currentPrice) / currentPrice) * 100
+        : 0;
+
     // Calcular ahorro mensual comparado con tarifa fija promedio (0.20 €/kWh)
-    const fixedTariff = 0.20;
-    const avgPrice = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
+    const fixedTariff = 0.2;
+    const avgPrice =
+      prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
     const monthlySavings = ((fixedTariff - avgPrice) / fixedTariff) * 100;
-    
+
     const comparisonType = 'tarifa fija';
     const lastUpdated = new Date().toISOString();
 
@@ -239,24 +250,30 @@ export class PricesService {
       priceChangePercentage: Math.round(priceChangePercentage * 100) / 100,
       monthlySavings: Math.round(monthlySavings * 100) / 100,
       comparisonType,
-      lastUpdated
+      lastUpdated,
     };
   }
 
-  private getPriceLevel(price: number, min: number, max: number): 'bajo' | 'medio' | 'alto' | 'muy-alto' {
+  private getPriceLevel(
+    price: number,
+    min: number,
+    max: number,
+  ): 'bajo' | 'medio' | 'alto' | 'muy-alto' {
     const range = max - min;
     const quartile = range / 4;
-    
+
     if (price <= min + quartile) return 'bajo';
     if (price <= min + 2 * quartile) return 'medio';
     if (price <= min + 3 * quartile) return 'alto';
     return 'muy-alto';
   }
 
-  async getHourlyPrices(period: 'today' | 'week' | 'month' = 'today'): Promise<HourlyPricesResponseDto> {
+  async getHourlyPrices(
+    period: 'today' | 'week' | 'month' = 'today',
+  ): Promise<HourlyPricesResponseDto> {
     let startDate: Date;
     const endDate = new Date();
-    
+
     switch (period) {
       case 'today':
         startDate = new Date();
@@ -279,7 +296,7 @@ export class PricesService {
 
     const prices = await this.priceModel
       .find({
-        date: { $gte: startDate, $lte: endDate }
+        date: { $gte: startDate, $lte: endDate },
       })
       .sort({ date: 1, hour: 1 })
       .exec();
@@ -289,25 +306,26 @@ export class PricesService {
         prices: [],
         average: 0,
         min: 0,
-        max: 0
+        max: 0,
       };
     }
 
-    const priceValues = prices.map(p => p.price);
+    const priceValues = prices.map((p) => p.price);
     const min = Math.min(...priceValues);
     const max = Math.max(...priceValues);
-    const average = priceValues.reduce((sum, price) => sum + price, 0) / priceValues.length;
+    const average =
+      priceValues.reduce((sum, price) => sum + price, 0) / priceValues.length;
 
-    const hourlyPrices: HourlyPriceDto[] = prices.map(price => {
+    const hourlyPrices: HourlyPriceDto[] = prices.map((price) => {
       const date = new Date(price.date);
       date.setHours(price.hour, 0, 0, 0);
-      
+
       return {
         timestamp: date.toISOString(),
         hour: price.hour.toString().padStart(2, '0'),
         price: Math.round(price.price * 1000) / 1000,
         level: this.getPriceLevel(price.price, min, max),
-        currency: 'EUR'
+        currency: 'EUR',
       };
     });
 
@@ -315,35 +333,38 @@ export class PricesService {
       prices: hourlyPrices,
       average: Math.round(average * 1000) / 1000,
       min: Math.round(min * 1000) / 1000,
-      max: Math.round(max * 1000) / 1000
+      max: Math.round(max * 1000) / 1000,
     };
   }
 
   async getRecommendations(): Promise<RecommendationsResponseDto> {
     const todayPrices = await this.getTodayPrices();
-    
+
     if (todayPrices.length === 0) {
       return {
         recommendations: [],
-        dailyTip: 'No hay datos de precios disponibles para generar recomendaciones.'
+        dailyTip:
+          'No hay datos de precios disponibles para generar recomendaciones.',
       };
     }
 
     const currentHour = new Date().getHours();
-    const priceValues = todayPrices.map(p => p.price);
+    const priceValues = todayPrices.map((p) => p.price);
     const minPrice = Math.min(...priceValues);
     const maxPrice = Math.max(...priceValues);
-    const avgPrice = priceValues.reduce((sum, price) => sum + price, 0) / priceValues.length;
+    const avgPrice =
+      priceValues.reduce((sum, price) => sum + price, 0) / priceValues.length;
 
     // Encontrar la hora más barata del día
-    const cheapestHour = todayPrices.find(p => p.price === minPrice);
+    const cheapestHour = todayPrices.find((p) => p.price === minPrice);
     // Encontrar la hora más cara del día
-    const expensiveHour = todayPrices.find(p => p.price === maxPrice);
+    const expensiveHour = todayPrices.find((p) => p.price === maxPrice);
 
     const recommendations: RecommendationDto[] = [];
 
     // Recomendación ideal (si estamos en una hora barata)
-    const currentPrice = todayPrices.find(p => p.hour === currentHour)?.price || avgPrice;
+    const currentPrice =
+      todayPrices.find((p) => p.hour === currentHour)?.price || avgPrice;
     if (currentPrice <= avgPrice * 0.8) {
       recommendations.push({
         type: 'ideal',
@@ -352,7 +373,9 @@ export class PricesService {
         timeRange: 'Próximas 2 horas',
         percentage: `${Math.round(((avgPrice - currentPrice) / avgPrice) * 100)}%`,
         appliance: 'lavadora',
-        savingsPercentage: Math.round(((avgPrice - currentPrice) / avgPrice) * 100)
+        savingsPercentage: Math.round(
+          ((avgPrice - currentPrice) / avgPrice) * 100,
+        ),
       });
     }
 
@@ -364,7 +387,7 @@ export class PricesService {
         description: 'Espera para usar electrodomésticos de alto consumo',
         timeRange: `Hasta las ${(currentHour + 2) % 24}:00`,
         percentage: `${Math.round(((currentPrice - avgPrice) / avgPrice) * 100)}%`,
-        appliance: 'lavavajillas'
+        appliance: 'lavavajillas',
       });
     }
 
@@ -376,20 +399,21 @@ export class PricesService {
         description: `Programa el lavavajillas para las ${cheapestHour.hour}:00`,
         timeRange: `A las ${cheapestHour.hour}:00`,
         appliance: 'lavavajillas',
-        savingsPercentage: Math.round(((avgPrice - cheapestHour.price) / avgPrice) * 100)
+        savingsPercentage: Math.round(
+          ((avgPrice - cheapestHour.price) / avgPrice) * 100,
+        ),
       });
     }
 
     // Consejo del día
     const cheapestTime = cheapestHour ? `${cheapestHour.hour}:00` : 'madrugada';
     const expensiveTime = expensiveHour ? `${expensiveHour.hour}:00` : 'tarde';
-    
+
     const dailyTip = `Los precios más baratos serán a las ${cheapestTime} y los más caros a las ${expensiveTime}. Ahorra hasta un ${Math.round(((maxPrice - minPrice) / maxPrice) * 100)}% eligiendo bien el momento.`;
 
     return {
       recommendations,
-      dailyTip
+      dailyTip,
     };
-
   }
 }

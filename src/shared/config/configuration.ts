@@ -5,8 +5,8 @@ export const validationSchema = Joi.object({
   DB_URI: Joi.string().required(),
   REE_API_URL: Joi.string().uri().required(),
   CRON_SCHEDULE: Joi.string(),
-  FALLBACK_RETRY_DELAY: Joi.number().default(30), 
-  MAX_RETRIES: Joi.number().default(2), 
+  FALLBACK_RETRY_DELAY: Joi.number().default(30),
+  MAX_RETRIES: Joi.number().default(2),
   TZ: Joi.string(),
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().default(6379),
@@ -23,4 +23,3 @@ export default () => ({
   maxRetries: parseInt(process.env.MAX_RETRIES, 10) || 2,
   timeZone: process.env.TZ || 'Europe/Madrid',
 });
-  

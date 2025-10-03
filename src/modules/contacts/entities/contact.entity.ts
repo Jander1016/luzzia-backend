@@ -1,11 +1,11 @@
-import { Document } from "mongoose";
+import { Document } from 'mongoose';
 
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 @Schema()
-export class Contact extends Document{
+export class Contact extends Document {
   @ApiProperty({ description: 'Nombre del contacto' })
   @Prop({ required: true })
   name: string;
@@ -16,4 +16,3 @@ export class Contact extends Document{
 }
 
 export const ContactSchema = SchemaFactory.createForClass(Contact);
-
