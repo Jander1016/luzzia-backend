@@ -8,6 +8,10 @@ export const validationSchema = Joi.object({
   FALLBACK_RETRY_DELAY: Joi.number().default(30), 
   MAX_RETRIES: Joi.number().default(2), 
   TZ: Joi.string(),
+  REDIS_HOST: Joi.string().default('localhost'),
+  REDIS_PORT: Joi.number().default(6379),
+  REDIS_PASSWORD: Joi.string().allow(''),
+  REDIS_DB: Joi.number().default(0),
 });
 
 export default () => ({
