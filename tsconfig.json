@@ -6,7 +6,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2017",
+    "target": "ES2018",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -19,7 +19,9 @@
     "noFallthroughCasesInSwitch": false,
     "useDefineForClassFields": false,
     "strict": false,
-    "lib": ["ES2017"]
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "lib": ["ES2018"]
   },
   "exclude": ["node_modules", "dist"]
 }
