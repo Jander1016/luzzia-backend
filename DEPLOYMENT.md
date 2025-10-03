@@ -83,7 +83,62 @@ La aplicación incluye health check en:
 3. **Timezone**: Configurado para Europe/Madrid
 4. **CORS**: Configurado para localhost:3000, 3001, 3002
 
-## 🚨 Troubleshooting
+## 🚨 Troubleshooting de Despliegue
+
+### Problemas Comunes en Plataformas
+
+#### 🔧 **Railway / Render / Fly.io**
+```bash
+# Usar Dockerfile principal (optimizado)
+docker build -t luzzia-backend .
+
+# Variables de entorno requeridas:
+PORT=4000  # O la que asigne la plataforma
+DB_URI=mongodb://...
+NODE_ENV=production
+```
+
+#### 🔧 **Heroku**
+```bash
+# Si falla multi-stage build, usar Dockerfile.simple
+docker build -f Dockerfile.simple -t luzzia-backend .
+
+# Heroku asigna PORT automáticamente
+# Solo necesitas configurar DB_URI
+```
+
+#### 🔧 **Error: "pnpm not found"**
+```dockerfile
+# El Dockerfile ya incluye pnpm installation
+# Si persiste, usar npm en lugar de pnpm:
+RUN npm install --production
+```
+
+#### 🔧 **Error: "Python/make not found"**
+```dockerfile
+# El Dockerfile incluye python3, make, g++
+# Necesario para módulos nativos de Node.js
+```
+
+#### 🔧 **Error: "Port already in use"**
+```bash
+# Usar variable de entorno PORT
+ENV PORT=${PORT:-4000}
+EXPOSE $PORT
+```
+
+#### 🔧 **Error: "Health check failed"**
+```dockerfile
+# Comentar o remover HEALTHCHECK si la plataforma no lo soporta
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+#     CMD curl -f http://localhost:$PORT/api/health || exit 1
+```
+
+### Dockerfiles Disponibles
+
+1. **`Dockerfile`** - Multi-stage optimizado (recomendado)
+2. **`Dockerfile.simple`** - Single-stage para máxima compatibilidad
+3. **`Dockerfile.platform`** - Específico para plataformas cloud
 
 ### Error: Cannot connect to MongoDB
 - Verificar que MongoDB esté ejecutándose

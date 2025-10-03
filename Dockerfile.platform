@@ -1,6 +1,6 @@
 # ============================================
-# 🐳 PRODUCTION DOCKERFILE - Platform Compatible
-# Optimizado para Railway, Render, Fly.io, Heroku
+# 🐳 PRODUCTION DOCKERFILE - Platform Optimized
+# Compatible with Railway, Render, Fly.io, etc.
 # ============================================
 
 # ============================================
@@ -31,9 +31,9 @@ RUN pnpm run build
 FROM node:20-alpine AS production
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init curl
+RUN apk add --no-cache dumb-init
 
-# Set environment variables
+# Set environment
 ENV NODE_ENV=production
 ENV PORT=${PORT:-4000}
 
@@ -47,10 +47,10 @@ COPY package.json pnpm-lock.yaml* ./
 RUN npm install -g pnpm@latest
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
-# Copy built application from builder
+# Copy built application
 COPY --from=builder /app/dist ./dist
 
-# Create non-root user and set permissions
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001 && \
     chown -R nestjs:nodejs /app
@@ -58,12 +58,8 @@ RUN addgroup -g 1001 -S nodejs && \
 # Switch to non-root user
 USER nestjs
 
-# Expose port (use environment variable for platform compatibility)
+# Expose port
 EXPOSE $PORT
 
-# Health check (optional, some platforms don't support it)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:$PORT/api/health || exit 1
-
-# Start application with dumb-init for proper signal handling
+# Start application
 CMD ["dumb-init", "node", "dist/main.js"]

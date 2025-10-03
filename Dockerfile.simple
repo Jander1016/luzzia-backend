@@ -1,0 +1,44 @@
+# ============================================
+# 🚀 SIMPLE DOCKERFILE - Maximum Compatibility
+# Para plataformas con limitaciones (Heroku, etc.)
+# ============================================
+
+FROM node:20-alpine
+
+# Install system dependencies
+RUN apk add --no-cache dumb-init python3 make g++
+
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=${PORT:-4000}
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package.json pnpm-lock.yaml* ./
+RUN npm install -g pnpm@latest
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build application
+RUN pnpm run build
+
+# Remove dev dependencies
+RUN pnpm prune --prod
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001 && \
+    chown -R nestjs:nodejs /app
+
+# Switch to non-root user
+USER nestjs
+
+# Expose port
+EXPOSE $PORT
+
+# Start application
+CMD ["dumb-init", "node", "dist/main.js"]
