@@ -19,6 +19,13 @@ export class PricesController {
     return this.pricesService.getTodayPrices();
   }
 
+  @Get('tomorrow')
+  @ApiOperation({ summary: 'Obtener precios del día siguiente' })
+  @ApiResponse({ status: 200, type: [PriceResponseDto] })
+  async getTomorrowPrices(): Promise<PriceResponseDto[]> {
+    return this.pricesService.getTomorrowPrices();
+  }
+
   @Get('history')
   @ApiOperation({ summary: 'Obtener histórico de precios' })
   @ApiQuery({ name: 'days', required: false, type: Number })
