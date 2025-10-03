@@ -31,17 +31,43 @@ export class PriceRepository {
   }
 
   async findTodayPrices(): Promise<Price[]> {
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    // Obtener fecha actual en UTC para coincidir con cómo se guardan los datos
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrow = new Date(today);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    
+    const query = {
+      date: {
+        $gte: today,
+        $lt: tomorrow
+      }
+    };
+    
+    // Buscar por fecha del precio, no por timestamp de guardado
+    const result = await this.priceModel
+      .find(query)
+      .sort({ hour: 1 })
+      .exec();
+      
+    return result;
+  }
 
+  async findTomorrowPrices(): Promise<Price[]> {
+    // Obtener fecha de mañana en UTC para coincidir con cómo se guardan los datos
+    const now = new Date();
+    // CORREGIDO: Usar Date.UTC para crear fechas UTC correctas
+    const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    
+    const dayAfterTomorrow = new Date(tomorrow);
+    dayAfterTomorrow.setUTCDate(dayAfterTomorrow.getUTCDate() + 1); // +1 día en UTC
+    
     return this.priceModel
       .find({
-        timestamp: {
-          $gte: startOfDay,
-          $lt: endOfDay,
-        },
+        date: {
+          $gte: tomorrow,
+          $lt: dayAfterTomorrow
+        }
       })
       .sort({ hour: 1 })
       .exec();
@@ -131,13 +157,13 @@ export class PriceRepository {
     const [minResult, maxResult] = await Promise.all([
       this.priceModel
         .findOne({
-          timestamp: { $gte: startOfDay, $lt: endOfDay },
+          date: { $gte: startOfDay, $lt: endOfDay }, // Cambiar timestamp por date
         })
         .sort({ price: 1 })
         .exec(),
       this.priceModel
         .findOne({
-          timestamp: { $gte: startOfDay, $lt: endOfDay },
+          date: { $gte: startOfDay, $lt: endOfDay }, // Cambiar timestamp por date
         })
         .sort({ price: -1 })
         .exec(),
