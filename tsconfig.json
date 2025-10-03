@@ -18,7 +18,8 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "useDefineForClassFields": false,
-    "strict": false
+    "strict": false,
+    "lib": ["ES2020"]
   },
   "exclude": ["node_modules", "dist"]
 }
