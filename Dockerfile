@@ -11,6 +11,9 @@ COPY package.json pnpm-lock.yaml ./
 # Clean install with frozen lockfile
 RUN pnpm install --frozen-lockfile --no-optional
 
+# Verify TypeScript version (should be 5.1.6)
+RUN pnpm list typescript
+
 # Copy source code
 COPY . .
 
