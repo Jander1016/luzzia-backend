@@ -31,12 +31,13 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1/');
 
   // CORS más restrictivo
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com', 'https://www.yourdomain.com']
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+  // const allowedOrigins = process.env.NODE_ENV === 'production' 
+  //   ? ['https://yourdomain.com', 'https://www.yourdomain.com']
+  //   : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
 
   app.enableCors({
-    origin: allowedOrigins,
+    // origin: allowedOrigins,
+    origin: "*",
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
     preflightContinue: false,
