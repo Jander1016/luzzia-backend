@@ -10,6 +10,19 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT');
 
+  // Configurar CORS
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://luzzia-frontend.vercel.app',
+      'https://luzzia-app.netlify.app'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+
   app.setGlobalPrefix('api/v1/');
 
   const config = new DocumentBuilder()
