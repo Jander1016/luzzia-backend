@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -9,15 +9,13 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT');
+  const allowedOrigins = configService.get<string[]>('ALLOWED_ORIGINS');
+  
+  const logger = new Logger('Bootstrap');
 
   // Configurar CORS
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://luzzia-frontend.vercel.app',
-      'https://luzzia-app.netlify.app'
-    ],
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -44,6 +42,7 @@ async function bootstrap() {
   )
 
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api/v1`);
+  logger.log(`🚀 Application is running on: http://localhost:${port}/api/v1`);
+  logger.log(`📚 Swagger docs available at: http://localhost:${port}/api/v1/documentation`);
 }
 bootstrap();
