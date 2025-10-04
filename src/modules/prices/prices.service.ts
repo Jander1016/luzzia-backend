@@ -44,26 +44,19 @@ export class PricesService {
       return `${yyyy}-${mm}-${dd}`; // "2025-09-27"
     };
 
-
-    return reeData.PVPC.map((item: any) => {
-      let date = new Date(item.Dia);
+    const transformedData = reeData.PVPC.map((item: any) => {
+      let date = convertDate(item.Dia);
       const hour = parseInt(item.Hora.split('-')[0], 10);
       const price = parseFloat(item.PCB) / 1000; // Convertir a €/kWh
-
-      if (date.toString() === 'Invalid Date') {
-        date = new Date(convertDate(item.Dia));
-      } else {
-        date = item.dia;
-      }
-
-      if (isNaN(hour) || isNaN(price)) {
-        this.logger.warn(`Invalid data format: ${JSON.stringify(item)}`);
+      if (!date || isNaN(hour) || isNaN(price)) {
+        this.logger.warn(`Formato de datos inválido: ${JSON.stringify(item)}`);
         return null;
       }
 
       return { date, hour, price };
     }).filter(Boolean);
-
+    
+    return transformedData;
   }
 
 
