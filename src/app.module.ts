@@ -6,6 +6,9 @@ import { PricesModule } from './modules/prices/prices.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PricesCron } from './shared/cron/prices.cron';
+import { CorsConfigService } from './shared/config/cors.config';
+import { SwaggerConfigService } from './shared/config/swagger.config';
+import { AppBootstrapService } from './shared/config/app-bootstrap.service';
 
 @Module({
   imports: [
@@ -15,6 +18,11 @@ import { PricesCron } from './shared/cron/prices.cron';
     PricesModule,
     ContactsModule,
   ],
-  providers: [PricesCron],
+  providers: [
+    PricesCron,
+    CorsConfigService,
+    SwaggerConfigService,
+    AppBootstrapService,
+  ],
 })
 export class AppModule { }
