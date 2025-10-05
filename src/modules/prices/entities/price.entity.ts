@@ -7,7 +7,7 @@ import { ApiProperty } from "@nestjs/swagger";
 export class Price extends Document {
 
   @ApiProperty({ description: 'Fecha del precio (YYYY-MM-DD)' })
-  @Prop({ required: true, index: true })
+  @Prop({ required: true, index: true, type: Date })
   date: Date;
 
   @ApiProperty({ description: 'Hora del día (0-23) de cambio de Precio' })

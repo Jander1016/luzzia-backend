@@ -106,6 +106,7 @@ export class PricesCron {
         const latestPrices = pricesByDate[latestDate];
 
         const today = new Date();
+        today.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
         const fallbackPrices = latestPrices.map(price => ({
           date: today,
           hour: price.hour,
@@ -125,7 +126,7 @@ export class PricesCron {
 
   private groupByDate(prices: any[]): { [key: string]: any[] } {
     return prices.reduce((acc, price) => {
-      const dateKey = price.date.toISOString().split('T')[0];
+      const dateKey = price.date.toISOString().split('T')[0]; // Convertir Date a string para agrupar
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }

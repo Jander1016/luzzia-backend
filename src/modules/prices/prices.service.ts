@@ -39,9 +39,9 @@ export class PricesService {
       throw new Error('Inválido formato de datos de API REE');
     }
 
-    const convertDate = (dateStr: string): string => {
+    const convertDate = (dateStr: string): Date => {
       const [dd, mm, yyyy] = dateStr.split('/');
-      return `${yyyy}-${mm}-${dd}`; // "2025-09-27"
+      return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`); // Crear objeto Date
     };
 
     const transformedData = reeData.PVPC.map((item: any) => {
@@ -80,6 +80,12 @@ export class PricesService {
   async savePrices(prices: CreatePriceDto[]): Promise<number> {
     let savedCount = 0;
 
+    this.logger.log(`💾 Intentando guardar ${prices.length} precios`);
+    
+    if (prices.length > 0) {
+      this.logger.log(`📅 Fechas de los datos recibidos: ${[...new Set(prices.map(p => p.date))].join(', ')}`);
+    }
+
     for (const priceData of prices) {
       try {
         await this.priceModel.findOneAndUpdate(
@@ -93,19 +99,31 @@ export class PricesService {
       }
     }
 
-    this.logger.log(`Saved ${savedCount} prices`);
+    this.logger.log(`✅ Guardados ${savedCount} precios`);
     return savedCount;
   }
 
   async getTodayPrices(): Promise<PriceResponseDto[]> {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    this.logger.log(`🔍 Buscando precios para la fecha: ${today.toISOString().split('T')[0]}`);
 
     const prices = await this.priceModel
-      .find({ date: { $gte: today } })
+      .find({ 
+        date: { 
+          $gte: today, 
+          $lt: tomorrow 
+        } 
+      })
       .sort({ hour: 1 })
       .exec();
 
+    this.logger.log(`📊 Encontrados ${prices.length} precios para hoy (${today.toISOString().split('T')[0]})`);
+    
     return prices.map(price => ({
       date: price.date,
       hour: price.hour,
@@ -118,7 +136,7 @@ export class PricesService {
   async getPriceHistory(days: number = 7): Promise<PriceResponseDto[]> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
 
     const prices = await this.priceModel
       .find({ date: { $gte: startDate } })
@@ -137,6 +155,7 @@ export class PricesService {
   async getPriceStats(days: number = 30): Promise<any> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
 
     const stats = await this.priceModel.aggregate([
       { $match: { date: { $gte: startDate } } },
@@ -179,11 +198,32 @@ export class PricesService {
   }
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
-    // Obtener precios reales de hoy
-    const todayPrices = await this.getTodayPrices();
+    // Intentar obtener precios de hoy
+    let todayPrices = await this.getTodayPrices();
     
+    // Si no hay datos de hoy, intentar obtener datos del último día disponible
     if (todayPrices.length === 0) {
-      throw new Error('No hay datos de precios disponibles para hoy.');
+      this.logger.warn('No data found for today, searching for latest available data');
+      
+      const latestPrices = await this.priceModel
+        .find({})
+        .sort({ date: -1, hour: 1 })
+        .limit(24) // Obtener las últimas 24 horas
+        .exec();
+      
+      if (latestPrices.length === 0) {
+        throw new Error('No hay datos de precios disponibles.');
+      }
+      
+      todayPrices = latestPrices.map(price => ({
+        date: price.date,
+        hour: price.hour,
+        price: price.price,
+        isFallback: true,
+        timestamp: price.timestamp
+      }));
+      
+      this.logger.log(`Using fallback data from ${latestPrices[0].date} (${latestPrices.length} records)`);
     }
 
     const currentHour = new Date().getHours();
@@ -254,6 +294,7 @@ export class PricesService {
         startDate.setHours(0, 0, 0, 0);
     }
 
+    // No convertir a string, usar objetos Date directamente
     const prices = await this.priceModel
       .find({
         date: { $gte: startDate, $lte: endDate },
