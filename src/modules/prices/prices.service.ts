@@ -1,5 +1,7 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Price } from './entities/price.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
@@ -32,6 +34,7 @@ export class PricesService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly priceRepository: PriceRepository,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) { }
 
   private transformREEData(reeData: any): CreatePriceDto[] {
@@ -99,11 +102,25 @@ export class PricesService {
       }
     }
 
+    // Invalidar caché cuando se guardan nuevos datos
+    if (savedCount > 0) {
+      await this.clearAllPriceCache();
+    }
+
     this.logger.log(`✅ Guardados ${savedCount} precios`);
     return savedCount;
   }
 
   async getTodayPrices(): Promise<PriceResponseDto[]> {
+    const cacheKey = 'today_prices';
+    
+    // Intentar obtener del caché primero
+    const cachedPrices = await this.cacheManager.get<PriceResponseDto[]>(cacheKey);
+    if (cachedPrices) {
+      this.logger.log(`📦 Returning today prices from cache (${cachedPrices.length} items)`);
+      return cachedPrices;
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
     
@@ -124,13 +141,19 @@ export class PricesService {
 
     this.logger.log(`📊 Encontrados ${prices.length} precios para hoy (${today.toISOString().split('T')[0]})`);
     
-    return prices.map(price => ({
+    const result = prices.map(price => ({
       date: price.date,
       hour: price.hour,
       price: price.price,
       isFallback: false,
       timestamp: price.timestamp
     }));
+
+    // Guardar en caché por 6 horas (se actualiza 1-2 veces al día)
+    await this.cacheManager.set(cacheKey, result, 1000 * 60 * 60 * 6);
+    this.logger.log(`💾 Cached today prices (${result.length} items)`);
+
+    return result;
   }
 
   async getPriceHistory(days: number = 7): Promise<PriceResponseDto[]> {
@@ -174,6 +197,15 @@ export class PricesService {
   }
 
   async getTomorrowPrices(): Promise<PriceResponseDto[]> {
+    const cacheKey = 'tomorrow_prices';
+    
+    // Intentar obtener del caché primero
+    const cachedPrices = await this.cacheManager.get<PriceResponseDto[]>(cacheKey);
+    if (cachedPrices) {
+      this.logger.log(`📦 Returning tomorrow prices from cache (${cachedPrices.length} items)`);
+      return cachedPrices;
+    }
+
     try {
       const prices = await this.priceRepository.findTomorrowPrices();
       
@@ -190,6 +222,12 @@ export class PricesService {
         timestamp: price.timestamp,
       }));
 
+      // Guardar en caché por 12 horas (datos de mañana se actualizan 1 vez al día)
+      if (result.length > 0) {
+        await this.cacheManager.set(cacheKey, result, 1000 * 60 * 60 * 12);
+        this.logger.log(`💾 Cached tomorrow prices (${result.length} items)`);
+      }
+
       return result;
     } catch (error) {
       this.logger.error('Error en getTomorrowPrices:', error);
@@ -198,6 +236,15 @@ export class PricesService {
   }
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
+    const cacheKey = 'dashboard_stats';
+    
+    // Intentar obtener del caché primero
+    const cachedStats = await this.cacheManager.get<DashboardStatsDto>(cacheKey);
+    if (cachedStats) {
+      this.logger.log(`📦 Returning dashboard stats from cache`);
+      return cachedStats;
+    }
+
     // Intentar obtener precios de hoy
     let todayPrices = await this.getTodayPrices();
     
@@ -244,7 +291,7 @@ export class PricesService {
     const comparisonType = 'tarifa fija';
     const lastUpdated = new Date().toISOString();
 
-    return {
+    const stats = {
       currentPrice,
       nextHourPrice,
       priceChangePercentage: Math.round(priceChangePercentage * 100) / 100,
@@ -252,6 +299,12 @@ export class PricesService {
       comparisonType,
       lastUpdated,
     };
+
+    // Guardar en caché por 1 hora (se actualizan con frecuencia por la hora actual)
+    await this.cacheManager.set(cacheKey, stats, 1000 * 60 * 60 * 1);
+    this.logger.log(`💾 Cached dashboard stats`);
+
+    return stats;
   }
 
   private getPriceLevel(
@@ -408,5 +461,22 @@ export class PricesService {
       recommendations,
       dailyTip,
     };
+  }
+
+  /**
+   * Invalidar todo el caché relacionado con precios
+   */
+  private async clearAllPriceCache(): Promise<void> {
+    try {
+      const cacheKeys = ['today_prices', 'tomorrow_prices', 'dashboard_stats'];
+      
+      for (const key of cacheKeys) {
+        await this.cacheManager.del(key);
+      }
+      
+      this.logger.log(`🗑️ Cache cleared for keys: ${cacheKeys.join(', ')}`);
+    } catch (error) {
+      this.logger.error('Error clearing cache:', error);
+    }
   }
 }

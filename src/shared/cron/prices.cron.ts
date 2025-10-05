@@ -18,8 +18,12 @@ export class PricesCron {
   }
 
   private setupDynamicCronJobs() {
-    const cronSchedule = this.configService.get<string>('cronSchedule');
-    const timeZone = this.configService.get<string>('timeZone');
+    const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
+                        this.configService.get<string>('cronSchedule') || 
+                        '15 20 * * *';
+    const timeZone = this.configService.get<string>('cron.timezone') || 
+                    this.configService.get<string>('timeZone') || 
+                    'Europe/Madrid';
     
     this.logger.log(`🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`);
     
@@ -58,7 +62,9 @@ export class PricesCron {
 
   // Método principal de actualización de precios
   async handleDailyPriceUpdate() {
-    const cronSchedule = this.configService.get<string>('cronSchedule');
+    const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
+                        this.configService.get<string>('cronSchedule') || 
+                        '15 20 * * *';
     this.logger.log(`📊 Starting daily price update with schedule: ${cronSchedule}`);
     await this.updatePrices();
   }
