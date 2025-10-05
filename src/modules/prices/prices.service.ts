@@ -5,7 +5,7 @@ import { Cache } from 'cache-manager';
 import { Price } from './entities/price.entity';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
-import { Model, now } from 'mongoose';
+import { Model } from 'mongoose';
 import { CreatePriceDto } from './dto/create-price.dto';
 import { catchError, firstValueFrom } from 'rxjs';
 import { PriceResponseDto } from './dto/response-price.dto';
@@ -76,8 +76,8 @@ export class PricesService {
     const { data } = await firstValueFrom(
       this.httpService.get(apiUrl).pipe(
         catchError((error) => {
-          this.logger.error('Error fetching desde API REE', error.stack);
-          throw new Error(`API REE error: ${error.message}`);
+          this.logger.error('Error fetching from REE API', error.stack);
+          throw new Error(`REE API error: ${error.message}`);
         }),
       ),
     );
@@ -103,7 +103,7 @@ export class PricesService {
         );
         savedCount++;
       } catch (error) {
-        this.logger.error(`Error guardando el precio para ${priceData.date} hora ${priceData.hour}`, error);
+        this.logger.error(`Error saving price for ${priceData.date} hour ${priceData.hour}`, error);
       }
     }
 
@@ -115,7 +115,7 @@ export class PricesService {
     this.logger.log(`✅ Guardados ${savedCount} precios`);
     return savedCount;
   }
-  
+
   async getTodayPrices(): Promise<PriceResponseDto[]> {
     const cacheKey = 'today_prices';
     
