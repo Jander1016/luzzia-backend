@@ -13,6 +13,7 @@ export interface LogContext {
   method?: string;
   userId?: string;
   requestId?: string;
+  duration?: number;
   metadata?: Record<string, any>;
 }
 
