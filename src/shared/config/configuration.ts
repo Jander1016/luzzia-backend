@@ -35,6 +35,9 @@ export default () => ({
   port: parseInt(process.env.PORT, 10) || 4000,
   dbUri: process.env.DB_URI,
   
+  // Compatibilidad hacia atrás
+  reeApiUrl: process.env.REE_API_URL,
+  
   apis: {
     ree: {
       url: process.env.REE_API_URL,
