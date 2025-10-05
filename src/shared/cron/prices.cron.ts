@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
+import { CronJob } from 'cron';
 import { PricesService } from '../../modules/prices/prices.service';
 
 @Injectable()
@@ -7,25 +9,77 @@ export class PricesCron {
   private readonly logger = new Logger(PricesCron.name);
   private hasRetried = false;
 
-  constructor(private readonly pricesService: PricesService) {}
+  constructor(
+    private readonly pricesService: PricesService,
+    private readonly configService: ConfigService,
+    private readonly schedulerRegistry: SchedulerRegistry,
+  ) {
+    this.setupDynamicCronJobs();
+  }
 
-  // Intento principal a las 20:15
-  @Cron('15 20 * * *', { timeZone: 'Europe/Madrid' })
+  private setupDynamicCronJobs() {
+    const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
+                        this.configService.get<string>('cronSchedule') || 
+                        '15 20 * * *';
+    const timeZone = this.configService.get<string>('cron.timezone') || 
+                    this.configService.get<string>('timeZone') || 
+                    'Europe/Madrid';
+    
+    this.logger.log(`🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`);
+    
+    // Cron job principal usando la variable de entorno
+    const mainCronJob = new CronJob(
+      cronSchedule,
+      () => this.handleDailyPriceUpdate(),
+      null,
+      true,
+      timeZone
+    );
+    
+    // Cron job de reintento a las 23:15
+    const retryCronJob = new CronJob(
+      '15 23 * * *',
+      () => this.handleRetryPriceUpdate(),
+      null,
+      true,
+      timeZone
+    );
+    
+    // Cron job de reset diario a medianoche
+    const resetCronJob = new CronJob(
+      '0 0 * * *',
+      () => this.resetDailyFlag(),
+      null,
+      true,
+      timeZone
+    );
+    
+    // Registrar los cron jobs
+    this.schedulerRegistry.addCronJob('mainPriceUpdate', mainCronJob);
+    this.schedulerRegistry.addCronJob('retryPriceUpdate', retryCronJob);
+    this.schedulerRegistry.addCronJob('resetDailyFlag', resetCronJob);
+  }
+
+  // Método principal de actualización de precios
   async handleDailyPriceUpdate() {
-    this.logger.log('Starting daily price update at 20:15');
+    const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
+                        this.configService.get<string>('cronSchedule') || 
+                        '15 20 * * *';
+    this.logger.log(`📊 Starting daily price update with schedule: ${cronSchedule}`);
     await this.updatePrices();
   }
 
-  // Único reintento a las 23:15
-  @Cron('15 23 * * *', { timeZone: 'Europe/Madrid' })
+  // Reintento a las 23:15 solo si no hay datos del día actual
   async handleRetryPriceUpdate() {
-    if (this.hasRetried) {
-      this.logger.log('Retry already attempted today, skipping');
+    // Verificar si ya tenemos datos del día actual
+    const todayPrices = await this.pricesService.getTodayPrices();
+    
+    if (todayPrices && todayPrices.length > 0) {
+      this.logger.log('✅ Today prices already exist, skipping retry');
       return;
     }
 
-    this.logger.log('Starting retry price update at 23:15');
-    this.hasRetried = true;
+    this.logger.log('⚠️ No data found for today, starting retry at 23:15');
     await this.updatePrices();
   }
 
@@ -34,12 +88,12 @@ export class PricesCron {
       const prices = await this.pricesService.fetchFromExternalApi();
       const savedCount = await this.pricesService.savePrices(prices);
       
-      this.logger.log(`Successfully saved ${savedCount} prices`);
+      this.logger.log(`✅ Successfully saved ${savedCount} prices`);
       
     } catch (error) {
-      this.logger.error(`Price update failed: ${error.message}`);
+      this.logger.error(`❌ Price update failed: ${error.message}`);
       
-      // Si es el reintento de las 23:15 y falla, usar datos anteriores
+      // Si falla, usar datos anteriores como fallback
       if (this.hasRetried) {
         await this.usePreviousDayData();
       }
@@ -47,7 +101,7 @@ export class PricesCron {
   }
 
   private async usePreviousDayData(): Promise<void> {
-    this.logger.warn('Using previous day data as fallback');
+    this.logger.warn('🔄 Using previous day data as fallback');
     
     try {
       const lastPrices = await this.pricesService.getPriceHistory(2); 
@@ -58,6 +112,7 @@ export class PricesCron {
         const latestPrices = pricesByDate[latestDate];
 
         const today = new Date();
+        today.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
         const fallbackPrices = latestPrices.map(price => ({
           date: today,
           hour: price.hour,
@@ -77,7 +132,7 @@ export class PricesCron {
 
   private groupByDate(prices: any[]): { [key: string]: any[] } {
     return prices.reduce((acc, price) => {
-      const dateKey = price.date.toISOString().split('T')[0];
+      const dateKey = price.date.toISOString().split('T')[0]; // Convertir Date a string para agrupar
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
@@ -86,10 +141,9 @@ export class PricesCron {
     }, {});
   }
 
-  // Reset diario del flag de reintento
-  @Cron('0 0 * * *', { timeZone: 'Europe/Madrid' }) // Medianoche
-  resetRetryFlag() {
+  // Reset diario a medianoche
+  resetDailyFlag() {
     this.hasRetried = false;
-    this.logger.log('Retry flag reset for new day');
+    this.logger.log('🔄 New day started - flags reset');
   }
 }

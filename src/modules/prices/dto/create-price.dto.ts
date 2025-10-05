@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class CreatePriceDto {
-  @ApiProperty({ description: 'Fecha del precio' })
+  @ApiProperty({ description: 'Fecha del precio', example: '2025-10-05' })
   @IsDate()
   @Type(() => Date)
   date: Date;

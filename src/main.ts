@@ -1,43 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppBootstrapService } from './shared/config/app-bootstrap.service';
 
 async function bootstrap() {
+  // Crear la aplicación NestJS
   const app = await NestFactory.create(AppModule);
 
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT');
+  // Obtener el servicio de bootstrap que maneja toda la configuración
+  const bootstrapService = app.get(AppBootstrapService);
 
-  app.setGlobalPrefix('api/v1/');
+  // Configurar la aplicación usando el servicio dedicado
+  await bootstrapService.configureApp(app);
 
-  app.enableCors(
-    {
-      origin: '*',
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      preflightContinue: false,
-      optionsSuccessStatus: 204,
-    }
-  );
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-    }),
-  )
-
-  const config = new DocumentBuilder()
-  .setTitle('Luzzia API')
-  .setDescription('Luzzia API description')
-  .setVersion('1.0')
-  .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/documentation', app, document);
-  
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api/v1`);
+  // Iniciar la aplicación
+  await bootstrapService.startApp(app);
 }
-bootstrap();
+
+// Manejo de errores global
+bootstrap().catch((error) => {
+  console.error('❌ Error starting application:', error);
+  process.exit(1);
+});
