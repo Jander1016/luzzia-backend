@@ -64,7 +64,12 @@ export class PricesService {
 
 
   async fetchFromExternalApi(): Promise<CreatePriceDto[]> {
-    const apiUrl = this.configService.get<string>('reeApiUrl');
+    const apiUrl = this.configService.get<string>('apis.ree.url') || 
+                   this.configService.get<string>('reeApiUrl');
+
+    if (!apiUrl) {
+      throw new Error('REE API URL not configured');
+    }
 
     this.logger.log(`Fetching de precios desde API externa: ${apiUrl}`);
 
@@ -325,35 +330,47 @@ export class PricesService {
     period: 'today' | 'week' | 'month' = 'today',
   ): Promise<HourlyPricesResponseDto> {
     let startDate: Date;
-    const endDate = new Date();
+    let endDate: Date;
 
     switch (period) {
       case 'today':
         startDate = new Date();
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1); // Día siguiente
         break;
       case 'week':
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 7);
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
         break;
       case 'month':
         startDate = new Date();
         startDate.setMonth(startDate.getMonth() - 1);
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
         break;
       default:
         startDate = new Date();
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
     }
 
-    // No convertir a string, usar objetos Date directamente
+    this.logger.log(`🔍 Hourly prices query: period=${period}, startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`);
+
+    // Usar $gte y $lt para el rango de fechas
     const prices = await this.priceModel
       .find({
-        date: { $gte: startDate, $lte: endDate },
+        date: { $gte: startDate, $lt: endDate },
       })
       .sort({ date: 1, hour: 1 })
       .exec();
+
+    this.logger.log(`📊 Found ${prices.length} prices for hourly query`);
 
     if (prices.length === 0) {
       return {
