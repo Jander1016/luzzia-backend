@@ -30,8 +30,8 @@ export class SwaggerConfigService {
       .setTitle('Luzzia API')
       .setDescription('API para gestión de precios de electricidad y contactos')
       .setVersion('1.0')
-      .addTag('prices', 'Operaciones relacionadas con precios de electricidad')
-      .addTag('contacts', 'Operaciones de gestión de contactos')
+      .addTag('Prices', 'Operaciones relacionadas con precios de electricidad')
+      .addTag('Contacts', 'Operaciones de gestión de contactos')
       .addBearerAuth() // Soporte para autenticación Bearer si se necesita en el futuro
       .addServer('http://localhost:4000', 'Desarrollo')
       .addServer('https://luzzia-backend-production.up.railway.app', 'Producción') // Ajustar según tu dominio
