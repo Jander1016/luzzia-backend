@@ -50,7 +50,10 @@ export class PricesService {
     const transformedData = reeData.PVPC.map((item: any) => {
       let date = convertDate(item.Dia);
       const hour = parseInt(item.Hora.split('-')[0], 10);
-      const price = parseFloat(item.PCB) / 1000; // Convertir a €/kWh
+      
+      let num = parseFloat(item.PCB.replace(',', '.'));
+      const price = parseFloat((num / 1000).toFixed(5)); // Convertir a €/kWh
+      
       if (!date || isNaN(hour) || isNaN(price)) {
         this.logger.warn(`Formato de datos inválido: ${JSON.stringify(item)}`);
         return null;
@@ -58,14 +61,14 @@ export class PricesService {
 
       return { date, hour, price };
     }).filter(Boolean);
-    
+
     return transformedData;
   }
 
 
   async fetchFromExternalApi(): Promise<CreatePriceDto[]> {
-    const apiUrl = this.configService.get<string>('apis.ree.url') || 
-                   this.configService.get<string>('reeApiUrl');
+    const apiUrl = this.configService.get<string>('apis.ree.url') ||
+      this.configService.get<string>('reeApiUrl');
 
     if (!apiUrl) {
       throw new Error('REE API URL not configured');
@@ -89,7 +92,7 @@ export class PricesService {
     let savedCount = 0;
 
     this.logger.log(`💾 Intentando guardar ${prices.length} precios`);
-    
+
     if (prices.length > 0) {
       this.logger.log(`📅 Fechas de los datos recibidos: ${[...new Set(prices.map(p => p.date))].join(', ')}`);
     }
@@ -118,7 +121,7 @@ export class PricesService {
 
   async getTodayPrices(): Promise<PriceResponseDto[]> {
     const cacheKey = 'today_prices';
-    
+
     // Intentar obtener del caché primero
     const cachedPrices = await this.cacheManager.get<PriceResponseDto[]>(cacheKey);
     if (cachedPrices) {
@@ -128,24 +131,24 @@ export class PricesService {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
-    
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     this.logger.log(`🔍 Buscando precios para la fecha: ${today.toISOString().split('T')[0]}`);
 
     const prices = await this.priceModel
-      .find({ 
-        date: { 
-          $gte: today, 
-          $lt: tomorrow 
-        } 
+      .find({
+        date: {
+          $gte: today,
+          $lt: tomorrow
+        }
       })
       .sort({ hour: 1 })
       .exec();
 
     this.logger.log(`📊 Encontrados ${prices.length} precios para hoy (${today.toISOString().split('T')[0]})`);
-    
+
     const result = prices.map(price => ({
       date: price.date,
       hour: price.hour,
@@ -203,7 +206,7 @@ export class PricesService {
 
   async getTomorrowPrices(): Promise<PriceResponseDto[]> {
     const cacheKey = 'tomorrow_prices';
-    
+
     // Intentar obtener del caché primero
     const cachedPrices = await this.cacheManager.get<PriceResponseDto[]>(cacheKey);
     if (cachedPrices) {
@@ -213,7 +216,7 @@ export class PricesService {
 
     try {
       const prices = await this.priceRepository.findTomorrowPrices();
-      
+
       if (prices.length === 0) {
         this.logger.warn('No se encontraron precios para mañana.');
         this.logger.log('Los precios de mañana normalmente se publican sobre las 20:30h');
@@ -242,7 +245,7 @@ export class PricesService {
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
     const cacheKey = 'dashboard_stats';
-    
+
     // Intentar obtener del caché primero
     const cachedStats = await this.cacheManager.get<DashboardStatsDto>(cacheKey);
     if (cachedStats) {
@@ -252,21 +255,21 @@ export class PricesService {
 
     // Intentar obtener precios de hoy
     let todayPrices = await this.getTodayPrices();
-    
+
     // Si no hay datos de hoy, intentar obtener datos del último día disponible
     if (todayPrices.length === 0) {
       this.logger.warn('No data found for today, searching for latest available data');
-      
+
       const latestPrices = await this.priceModel
         .find({})
         .sort({ date: -1, hour: 1 })
         .limit(24) // Obtener las últimas 24 horas
         .exec();
-      
+
       if (latestPrices.length === 0) {
         throw new Error('No hay datos de precios disponibles.');
       }
-      
+
       todayPrices = latestPrices.map(price => ({
         date: price.date,
         hour: price.hour,
@@ -274,25 +277,25 @@ export class PricesService {
         isFallback: true,
         timestamp: price.timestamp
       }));
-      
+
       this.logger.log(`Using fallback data from ${latestPrices[0].date} (${latestPrices.length} records)`);
     }
 
     const currentHour = new Date().getHours();
     const currentPriceData = todayPrices.find((p) => p.hour === currentHour) || todayPrices[0];
     const nextHourPriceData = todayPrices.find((p) => p.hour === currentHour + 1) || todayPrices[1];
-    
+
     const currentPrice = currentPriceData.price;
     const nextHourPrice = nextHourPriceData?.price || 0;
-    const priceChangePercentage = nextHourPrice > 0 
-      ? ((nextHourPrice - currentPrice) / currentPrice) * 100 
+    const priceChangePercentage = nextHourPrice > 0
+      ? ((nextHourPrice - currentPrice) / currentPrice) * 100
       : 0;
 
     // Calcular ahorro mensual comparado con tarifa fija promedio (0.20 €/kWh)
     const fixedTariff = 0.2;
     const avgPrice = todayPrices.reduce((sum, p) => sum + p.price, 0) / todayPrices.length;
     const monthlySavings = ((fixedTariff - avgPrice) / fixedTariff) * 100;
-    
+
     const comparisonType = 'tarifa fija';
     const lastUpdated = new Date().toISOString();
 
@@ -432,7 +435,7 @@ export class PricesService {
 
     // Recomendación ideal (si estamos en una hora barata)
     const currentPrice = todayPrices.find((p) => p.hour === currentHour)?.price || avgPrice;
-    
+
     if (currentPrice <= avgPrice * 0.8) {
       recommendations.push({
         type: 'ideal',
@@ -486,11 +489,11 @@ export class PricesService {
   private async clearAllPriceCache(): Promise<void> {
     try {
       const cacheKeys = ['today_prices', 'tomorrow_prices', 'dashboard_stats'];
-      
+
       for (const key of cacheKeys) {
         await this.cacheManager.del(key);
       }
-      
+
       this.logger.log(`🗑️ Cache cleared for keys: ${cacheKeys.join(', ')}`);
     } catch (error) {
       this.logger.error('Error clearing cache:', error);
