@@ -84,4 +84,41 @@ export class PricesController {
       saved: savedCount 
     };
   }
+
+  @Get('health')
+  @ApiOperation({ summary: 'Verificar estado del sistema de precios' })
+  @ApiResponse({ status: 200, description: 'Estado del sistema' })
+  async getSystemHealth(): Promise<any> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const todayPrices = await this.pricesService.getTodayPrices();
+    const yesterdayPrices = await this.pricesService.getPriceHistory(2);
+    const yesterdayCount = yesterdayPrices.filter(p => 
+      p.date.toDateString() === yesterday.toDateString()
+    ).length;
+    
+    return {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      timezone: process.env.TZ || 'UTC',
+      cronSchedule: process.env.CRON_SCHEDULE || '15 20 * * *',
+      data: {
+        today: {
+          date: today.toISOString().split('T')[0],
+          count: todayPrices.length,
+          hasData: todayPrices.length > 0,
+          latestTimestamp: todayPrices.length > 0 ? todayPrices[0].timestamp : null
+        },
+        yesterday: {
+          date: yesterday.toISOString().split('T')[0],
+          count: yesterdayCount,
+          hasData: yesterdayCount > 0
+        }
+      }
+    };
+  }
 }
