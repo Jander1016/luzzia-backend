@@ -60,7 +60,7 @@ export default () => ({
   fallbackRetryDelay: parseInt(process.env.FALLBACK_RETRY_DELAY, 10) || 30,
   allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'https://luzzia-backend-production.up.railway.app'],
   maxRetries: parseInt(process.env.MAX_RETRIES, 10) || 3,
   
   cache: {
