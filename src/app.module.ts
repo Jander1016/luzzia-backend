@@ -1,19 +1,22 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './shared/config/configuration';
-import { ScheduleModule  } from '@nestjs/schedule';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import { PricesModule } from './modules/prices/prices.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PricesCron } from './shared/cron/prices.cron';
 import { CorsConfigService } from './shared/config/cors.config';
 import { SwaggerConfigService } from './shared/config/swagger.config';
 import { AppBootstrapService } from './shared/config/app-bootstrap.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({isGlobal: true, load: [configuration], envFilePath: '.env'}),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      envFilePath: '.env',
+    }),
     MongooseModule.forRoot(process.env.DB_URI),
     ScheduleModule.forRoot(),
     CacheModule.register({
@@ -24,11 +27,6 @@ import { AppBootstrapService } from './shared/config/app-bootstrap.service';
     PricesModule,
     ContactsModule,
   ],
-  providers: [
-    PricesCron,
-    CorsConfigService,
-    SwaggerConfigService,
-    AppBootstrapService,
-  ],
+  providers: [CorsConfigService, SwaggerConfigService, AppBootstrapService],
 })
-export class AppModule { }
+export class AppModule {}

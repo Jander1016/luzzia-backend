@@ -21,17 +21,23 @@ export class PricesCron {
   }
 
   private setupDynamicCronJobs() {
-    const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
-                        this.configService.get<string>('cronSchedule') || 
-                        '15 20 * * *';
-    const timeZone = this.configService.get<string>('cron.timezone') || 
-                    this.configService.get<string>('timeZone') || 
-                    'Europe/Madrid';
-    
-    this.logger.log(`🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`);
+    const cronSchedule =
+      this.configService.get<string>('cron.mainSchedule') ||
+      this.configService.get<string>('cronSchedule') ||
+      '15 20 * * *';
+    const timeZone =
+      this.configService.get<string>('cron.timezone') ||
+      this.configService.get<string>('timeZone') ||
+      'Europe/Madrid';
+
+    this.logger.log(
+      `🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`,
+    );
     this.logger.log(`🌍 Current server time: ${new Date().toISOString()}`);
-    this.logger.log(`🌍 Madrid time: ${new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`);
-    
+    this.logger.log(
+      `🌍 Madrid time: ${new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`,
+    );
+
     try {
       // Cron job principal usando la variable de entorno
       const mainCronJob = new CronJob(
@@ -39,25 +45,25 @@ export class PricesCron {
         () => this.handleDailyPriceUpdate(),
         null,
         true,
-        timeZone
+        timeZone,
       );
-      
+
       // Cron job de reintento a las 23:15
       const retryCronJob = new CronJob(
         '15 23 * * *',
         () => this.handleRetryPriceUpdate(),
         null,
         true,
-        timeZone
+        timeZone,
       );
-      
+
       // Cron job de reset diario a medianoche
       const resetCronJob = new CronJob(
         '0 0 * * *',
         () => this.resetDailyFlag(),
         null,
         true,
-        timeZone
+        timeZone,
       );
 
       // Cron job de verificación cada 6 horas (backup automático)
@@ -66,46 +72,66 @@ export class PricesCron {
         () => this.handleBackupCheck(),
         null,
         true,
-        timeZone
+        timeZone,
       );
-      
+
       // Registrar los cron jobs
       this.schedulerRegistry.addCronJob('mainPriceUpdate', mainCronJob);
       this.schedulerRegistry.addCronJob('retryPriceUpdate', retryCronJob);
       this.schedulerRegistry.addCronJob('resetDailyFlag', resetCronJob);
       this.schedulerRegistry.addCronJob('backupCheck', backupCronJob);
-      
+
       this.cronStatus = 'active';
       this.logger.log(`✅ CRON jobs registered successfully`);
-      this.logger.log(`📅 Next main execution: ${mainCronJob.nextDate()?.toString()}`);
-      this.logger.log(`📅 Next retry execution: ${retryCronJob.nextDate()?.toString()}`);
-      this.logger.log(`📅 Next reset execution: ${resetCronJob.nextDate()?.toString()}`);
-      this.logger.log(`📅 Next backup check: ${backupCronJob.nextDate()?.toString()}`);
-      
+      this.logger.log(
+        `📅 Next main execution: ${mainCronJob.nextDate()?.toString()}`,
+      );
+      this.logger.log(
+        `📅 Next retry execution: ${retryCronJob.nextDate()?.toString()}`,
+      );
+      this.logger.log(
+        `📅 Next reset execution: ${resetCronJob.nextDate()?.toString()}`,
+      );
+      this.logger.log(
+        `📅 Next backup check: ${backupCronJob.nextDate()?.toString()}`,
+      );
     } catch (error) {
       this.cronStatus = 'error';
-      this.logger.error(`❌ Failed to setup CRON jobs: ${error.message}`, error.stack);
+      this.logger.error(
+        `❌ Failed to setup CRON jobs: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
   // Método principal de actualización de precios
   async handleDailyPriceUpdate() {
     this.lastExecution = new Date();
-    const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
-                        this.configService.get<string>('cronSchedule') || 
-                        '15 20 * * *';
-    this.logger.log(`📊 Starting daily price update with schedule: ${cronSchedule}`);
+    const cronSchedule =
+      this.configService.get<string>('cron.mainSchedule') ||
+      this.configService.get<string>('cronSchedule') ||
+      '15 20 * * *';
+    this.logger.log(
+      `📊 Starting daily price update with schedule: ${cronSchedule}`,
+    );
     this.logger.log(`🕐 Execution time: ${this.lastExecution.toISOString()}`);
-    this.logger.log(`🌍 Madrid time: ${this.lastExecution.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`);
-    
+    this.logger.log(
+      `🌍 Madrid time: ${this.lastExecution.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`,
+    );
+
     try {
       await this.updatePrices();
       this.lastSuccessfulExecution = new Date();
       this.cronStatus = 'active';
-      this.logger.log(`✅ CRON execution completed successfully at ${this.lastSuccessfulExecution.toISOString()}`);
+      this.logger.log(
+        `✅ CRON execution completed successfully at ${this.lastSuccessfulExecution.toISOString()}`,
+      );
     } catch (error) {
       this.cronStatus = 'error';
-      this.logger.error(`❌ CRON execution failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `❌ CRON execution failed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -113,7 +139,7 @@ export class PricesCron {
   async handleRetryPriceUpdate() {
     // Verificar si ya tenemos datos del día actual
     const todayPrices = await this.pricesService.getTodayPrices();
-    
+
     if (todayPrices && todayPrices.length > 0) {
       this.logger.log('✅ Today prices already exist, skipping retry');
       return;
@@ -126,26 +152,37 @@ export class PricesCron {
   // Verificación de backup cada 6 horas
   async handleBackupCheck() {
     this.logger.log('🔍 Starting backup check');
-    
+
     try {
       // Verificar si tenemos datos de hoy
       const todayPrices = await this.pricesService.getTodayPrices();
-      
+
       // Si no tenemos datos de hoy y ya pasaron las 21:00, intentar obtenerlos
       const now = new Date();
-      const madridTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+      const madridTime = new Date(
+        now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }),
+      );
       const currentHour = madridTime.getHours();
-      
+
       if ((!todayPrices || todayPrices.length === 0) && currentHour >= 21) {
-        this.logger.warn('⚠️ Missing today data after 21:00, triggering backup fetch');
+        this.logger.warn(
+          '⚠️ Missing today data after 21:00, triggering backup fetch',
+        );
         await this.updatePrices();
       } else if (todayPrices && todayPrices.length > 0) {
-        this.logger.log(`✅ Backup check: ${todayPrices.length} prices found for today`);
+        this.logger.log(
+          `✅ Backup check: ${todayPrices.length} prices found for today`,
+        );
       } else {
-        this.logger.log(`ℹ️ Backup check: No data yet, but it's only ${currentHour}:00 Madrid time`);
+        this.logger.log(
+          `ℹ️ Backup check: No data yet, but it's only ${currentHour}:00 Madrid time`,
+        );
       }
     } catch (error) {
-      this.logger.error(`❌ Backup check failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `❌ Backup check failed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -153,12 +190,11 @@ export class PricesCron {
     try {
       const prices = await this.pricesService.fetchFromExternalApi();
       const savedCount = await this.pricesService.savePrices(prices);
-      
+
       this.logger.log(`✅ Successfully saved ${savedCount} prices`);
-      
     } catch (error) {
       this.logger.error(`❌ Price update failed: ${error.message}`);
-      
+
       // Si falla, usar datos anteriores como fallback
       if (this.hasRetried) {
         await this.usePreviousDayData();
@@ -168,10 +204,10 @@ export class PricesCron {
 
   private async usePreviousDayData(): Promise<void> {
     this.logger.warn('🔄 Using previous day data as fallback');
-    
+
     try {
-      const lastPrices = await this.pricesService.getPriceHistory(2); 
-      
+      const lastPrices = await this.pricesService.getPriceHistory(2);
+
       if (lastPrices.length > 0) {
         const pricesByDate = this.groupByDate(lastPrices);
         const latestDate = Object.keys(pricesByDate).sort().reverse()[0];
@@ -179,7 +215,7 @@ export class PricesCron {
 
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Asegurar que sea el inicio del día
-        const fallbackPrices = latestPrices.map(price => ({
+        const fallbackPrices = latestPrices.map((price) => ({
           date: today,
           hour: price.hour,
           price: price.price,
@@ -241,14 +277,18 @@ export class PricesCron {
         backupCheck: {
           nextExecution: backupCron.nextDate()?.toString(),
           lastDate: backupCron.lastDate()?.toString(),
-        }
+        },
       },
       serverTime: new Date().toISOString(),
-      madridTime: new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }),
+      madridTime: new Date().toLocaleString('es-ES', {
+        timeZone: 'Europe/Madrid',
+      }),
       configuration: {
-        mainSchedule: this.configService.get<string>('cron.mainSchedule') || '15 20 * * *',
-        timezone: this.configService.get<string>('cron.timezone') || 'Europe/Madrid',
-      }
+        mainSchedule:
+          this.configService.get<string>('cron.mainSchedule') || '15 20 * * *',
+        timezone:
+          this.configService.get<string>('cron.timezone') || 'Europe/Madrid',
+      },
     };
   }
 

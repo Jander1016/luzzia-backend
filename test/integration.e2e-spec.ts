@@ -27,13 +27,13 @@ describe('API Integration Tests (Real Server)', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      
+
       if (response.body.length > 0) {
         expect(response.body[0]).toHaveProperty('date');
         expect(response.body[0]).toHaveProperty('hour');
         expect(response.body[0]).toHaveProperty('price');
         expect(response.body[0]).toHaveProperty('timestamp');
-        
+
         // Verificar que la fecha es de hoy (6 de octubre, 2025)
         const priceDate = new Date(response.body[0].date);
         expect(priceDate.getDate()).toBe(6);
@@ -82,7 +82,7 @@ describe('API Integration Tests (Real Server)', () => {
         expect(price).toHaveProperty('price');
         expect(price).toHaveProperty('level');
         expect(price).toHaveProperty('currency', 'EUR');
-        
+
         expect(['bajo', 'medio', 'alto', 'muy-alto']).toContain(price.level);
       }
     });
@@ -105,7 +105,7 @@ describe('API Integration Tests (Real Server)', () => {
         expect(recommendation).toHaveProperty('description');
         expect(recommendation).toHaveProperty('appliance');
         expect(recommendation).toHaveProperty('savingsPercentage');
-        
+
         expect(typeof recommendation.savingsPercentage).toBe('number');
         expect(recommendation.savingsPercentage).toBeGreaterThanOrEqual(0);
         expect(recommendation.savingsPercentage).toBeLessThanOrEqual(100);
@@ -118,7 +118,7 @@ describe('API Integration Tests (Real Server)', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      
+
       if (response.body.length > 0) {
         expect(response.body[0]).toHaveProperty('date');
         expect(response.body[0]).toHaveProperty('hour');
@@ -133,13 +133,13 @@ describe('API Integration Tests (Real Server)', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      
+
       if (response.body.length > 0) {
         expect(response.body[0]).toHaveProperty('_id');
         expect(response.body[0]).toHaveProperty('avgPrice');
         expect(response.body[0]).toHaveProperty('minPrice');
         expect(response.body[0]).toHaveProperty('maxPrice');
-        
+
         expect(typeof response.body[0].avgPrice).toBe('number');
         expect(typeof response.body[0].minPrice).toBe('number');
         expect(typeof response.body[0].maxPrice).toBe('number');
@@ -149,7 +149,7 @@ describe('API Integration Tests (Real Server)', () => {
     it('should handle period parameter in hourly endpoint', async () => {
       // Test different periods
       const periods = ['today', 'week', 'month'];
-      
+
       for (const period of periods) {
         const response = await request(baseUrl)
           .get(`/api/v1/prices/hourly?period=${period}`)
@@ -183,7 +183,7 @@ describe('API Integration Tests (Real Server)', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      
+
       if (response.body.length > 0) {
         expect(response.body[0]).toHaveProperty('_id');
         expect(response.body[0]).toHaveProperty('name');
@@ -210,7 +210,7 @@ describe('API Integration Tests (Real Server)', () => {
 
     it('should not create contact with duplicate email', async () => {
       const duplicateEmail = 'jandergb.30@gmail.com'; // Email que ya existe en la BD
-      
+
       const response = await request(baseUrl)
         .post('/api/v1/contacts')
         .send({
@@ -255,7 +255,7 @@ describe('API Integration Tests (Real Server)', () => {
 
     it('should normalize email to lowercase', async () => {
       const uniqueEmail = `E2E-UPPERCASE-${Date.now()}@EXAMPLE.COM`;
-      
+
       const response = await request(baseUrl)
         .post('/api/v1/contacts')
         .send({
@@ -275,7 +275,7 @@ describe('API Integration Tests (Real Server)', () => {
         .expect(200);
 
       // Esperar un poco y hacer otra request
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const response2 = await request(baseUrl)
         .get('/api/v1/prices/today')
@@ -283,7 +283,7 @@ describe('API Integration Tests (Real Server)', () => {
 
       // Los datos deberían ser consistentes (mismo cache)
       expect(response1.body.length).toBe(response2.body.length);
-      
+
       if (response1.body.length > 0) {
         expect(response1.body[0].price).toBe(response2.body[0].price);
         expect(response1.body[0].timestamp).toBe(response2.body[0].timestamp);
@@ -307,9 +307,7 @@ describe('API Integration Tests (Real Server)', () => {
 
   describe('Error Handling', () => {
     it('should return 404 for non-existent endpoints', async () => {
-      await request(baseUrl)
-        .get('/api/v1/non-existent-endpoint')
-        .expect(404);
+      await request(baseUrl).get('/api/v1/non-existent-endpoint').expect(404);
     });
 
     it('should handle malformed requests gracefully', async () => {
@@ -331,7 +329,7 @@ describe('API Integration Tests (Real Server)', () => {
   });
 
   describe('Data Validation', () => {
-    it('should verify today\'s prices are from the correct date', async () => {
+    it("should verify today's prices are from the correct date", async () => {
       const response = await request(baseUrl)
         .get('/api/v1/prices/today')
         .expect(200);
@@ -360,18 +358,20 @@ describe('API Integration Tests (Real Server)', () => {
       // Los precios deberían estar en un rango razonable (0.01 a 1.00 EUR/kWh)
       expect(response.body.currentPrice).toBeGreaterThan(0);
       expect(response.body.currentPrice).toBeLessThan(1);
-      
+
       expect(response.body.nextHourPrice).toBeGreaterThan(0);
       expect(response.body.nextHourPrice).toBeLessThan(1);
 
       // Los porcentajes deberían estar en rangos razonables
       expect(response.body.priceChangePercentage).toBeGreaterThanOrEqual(-100);
       expect(response.body.priceChangePercentage).toBeLessThanOrEqual(1000);
-      
+
       expect(response.body.monthlySavings).toBeGreaterThanOrEqual(-100);
       expect(response.body.monthlySavings).toBeLessThanOrEqual(100);
 
-      expect(['tarifa fija', 'precio mercado']).toContain(response.body.comparisonType);
+      expect(['tarifa fija', 'precio mercado']).toContain(
+        response.body.comparisonType,
+      );
     });
   });
 });

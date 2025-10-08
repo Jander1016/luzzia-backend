@@ -3,10 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 
-
 @Injectable()
 export class SwaggerConfigService {
-
   constructor(private readonly configService: ConfigService) {}
 
   /**
@@ -16,7 +14,7 @@ export class SwaggerConfigService {
   setupSwagger(app: INestApplication): void {
     const config = this.createSwaggerConfig();
     const document = SwaggerModule.createDocument(app, config);
-    
+
     const docsPath = 'api/v1/documentation';
     SwaggerModule.setup(docsPath, app, document);
   }
@@ -34,7 +32,10 @@ export class SwaggerConfigService {
       .addTag('Contacts', 'Operaciones de gestión de contactos')
       .addBearerAuth() // Soporte para autenticación Bearer si se necesita en el futuro
       .addServer('http://localhost:4000', 'Desarrollo')
-      .addServer('https://luzzia-backend-production.up.railway.app', 'Producción') // Ajustar según tu dominio
+      .addServer(
+        'https://luzzia-backend-production.up.railway.app',
+        'Producción',
+      ) // Ajustar según tu dominio
       .build();
   }
 

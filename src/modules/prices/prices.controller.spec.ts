@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PricesController } from './prices.controller';
 import { PricesService } from './prices.service';
+import { PricesCron } from '../../shared/cron/prices.cron';
 
 describe('PricesController', () => {
   let controller: PricesController;
@@ -16,6 +17,10 @@ describe('PricesController', () => {
     getPriceStats: jest.fn(),
     fetchFromExternalApi: jest.fn(),
     savePrices: jest.fn(),
+  };
+
+  const mockPricesCron = {
+    handleCron: jest.fn(),
   };
 
   const mockTodayPrices = [
@@ -71,7 +76,8 @@ describe('PricesController', () => {
         savingsPercentage: 43,
       },
     ],
-    dailyTip: 'Los precios más baratos serán a las 1:00 y los más caros a las 21:00.',
+    dailyTip:
+      'Los precios más baratos serán a las 1:00 y los más caros a las 21:00.',
   };
 
   beforeEach(async () => {
@@ -81,6 +87,10 @@ describe('PricesController', () => {
         {
           provide: PricesService,
           useValue: mockPricesService,
+        },
+        {
+          provide: PricesCron,
+          useValue: mockPricesCron,
         },
       ],
     }).compile();
@@ -123,9 +133,13 @@ describe('PricesController', () => {
     });
 
     it('should handle service errors', async () => {
-      mockPricesService.getTodayPrices.mockRejectedValue(new Error('Database connection failed'));
+      mockPricesService.getTodayPrices.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
-      await expect(controller.getTodayPrices()).rejects.toThrow('Database connection failed');
+      await expect(controller.getTodayPrices()).rejects.toThrow(
+        'Database connection failed',
+      );
     });
   });
 
@@ -229,7 +243,7 @@ describe('PricesController', () => {
       expect(typeof result.average).toBe('number');
       expect(typeof result.min).toBe('number');
       expect(typeof result.max).toBe('number');
-      
+
       if (result.prices.length > 0) {
         expect(result.prices[0]).toHaveProperty('timestamp');
         expect(result.prices[0]).toHaveProperty('hour');
@@ -242,7 +256,9 @@ describe('PricesController', () => {
 
   describe('getRecommendations', () => {
     it('should return energy usage recommendations', async () => {
-      mockPricesService.getRecommendations.mockResolvedValue(mockRecommendations);
+      mockPricesService.getRecommendations.mockResolvedValue(
+        mockRecommendations,
+      );
 
       const result = await controller.getRecommendations();
 
@@ -255,7 +271,9 @@ describe('PricesController', () => {
     });
 
     it('should validate recommendation structure', async () => {
-      mockPricesService.getRecommendations.mockResolvedValue(mockRecommendations);
+      mockPricesService.getRecommendations.mockResolvedValue(
+        mockRecommendations,
+      );
 
       const result = await controller.getRecommendations();
 
@@ -358,7 +376,9 @@ describe('PricesController', () => {
         },
       ];
 
-      mockPricesService.fetchFromExternalApi.mockResolvedValue(mockFetchedPrices);
+      mockPricesService.fetchFromExternalApi.mockResolvedValue(
+        mockFetchedPrices,
+      );
       mockPricesService.savePrices.mockResolvedValue(24);
 
       const result = await controller.fetchPrices();
@@ -372,7 +392,9 @@ describe('PricesController', () => {
     });
 
     it('should handle fetch errors', async () => {
-      mockPricesService.fetchFromExternalApi.mockRejectedValue(new Error('API Error'));
+      mockPricesService.fetchFromExternalApi.mockRejectedValue(
+        new Error('API Error'),
+      );
 
       await expect(controller.fetchPrices()).rejects.toThrow('API Error');
     });
@@ -386,8 +408,12 @@ describe('PricesController', () => {
         },
       ];
 
-      mockPricesService.fetchFromExternalApi.mockResolvedValue(mockFetchedPrices);
-      mockPricesService.savePrices.mockRejectedValue(new Error('Database Error'));
+      mockPricesService.fetchFromExternalApi.mockResolvedValue(
+        mockFetchedPrices,
+      );
+      mockPricesService.savePrices.mockRejectedValue(
+        new Error('Database Error'),
+      );
 
       await expect(controller.fetchPrices()).rejects.toThrow('Database Error');
     });
@@ -401,7 +427,9 @@ describe('PricesController', () => {
         },
       ];
 
-      mockPricesService.fetchFromExternalApi.mockResolvedValue(mockFetchedPrices);
+      mockPricesService.fetchFromExternalApi.mockResolvedValue(
+        mockFetchedPrices,
+      );
       mockPricesService.savePrices.mockResolvedValue(1);
 
       const result = await controller.fetchPrices();

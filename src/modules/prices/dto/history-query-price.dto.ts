@@ -3,7 +3,11 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
 export class HistoryQueryDto {
-  @ApiProperty({ required: false, default: 7, description: 'Días de histórico' })
+  @ApiProperty({
+    required: false,
+    default: 7,
+    description: 'Días de histórico',
+  })
   @IsNumber()
   @IsOptional()
   @Min(1)

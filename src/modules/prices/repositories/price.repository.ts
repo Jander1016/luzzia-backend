@@ -58,7 +58,7 @@ export class PriceRepository {
 
     const dayAfterTomorrow = new Date(tomorrow);
     dayAfterTomorrow.setUTCDate(dayAfterTomorrow.getUTCDate() + 1);
-    
+
     return this.priceModel
       .find({
         date: {

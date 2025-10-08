@@ -84,7 +84,9 @@ describe('ContactsService', () => {
       // Mock findOne que retorna un contacto existente
       mockContactModel.findOne = jest.fn().mockResolvedValue(existingContact);
 
-      await expect(service.create(createContactDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createContactDto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockContactModel.findOne).toHaveBeenCalledWith({
         email: createContactDto.email.toLowerCase(),
       });
@@ -105,7 +107,9 @@ describe('ContactsService', () => {
       };
       mockContactModel.mockImplementation(() => mockInstance);
 
-      await expect(service.create(createContactDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createContactDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -163,12 +167,16 @@ describe('ContactsService', () => {
     it('should handle database errors', async () => {
       const mockQueryChain = {
         sort: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockRejectedValue(new Error('Database connection failed')),
+        exec: jest
+          .fn()
+          .mockRejectedValue(new Error('Database connection failed')),
       };
 
       mockContactModel.find = jest.fn().mockReturnValue(mockQueryChain);
 
-      await expect(service.findAll()).rejects.toThrow('Database connection failed');
+      await expect(service.findAll()).rejects.toThrow(
+        'Database connection failed',
+      );
     });
   });
 });

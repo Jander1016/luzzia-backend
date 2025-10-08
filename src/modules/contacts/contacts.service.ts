@@ -16,7 +16,7 @@ export class ContactsService {
       const existingContact = await this.contactModel.findOne({
         email: normalizedEmail(createContactDto.email),
       });
-      
+
       if (existingContact) {
         this.logger.warn(
           `El correo electrónico ya está registrado. ${createContactDto.email}`,
@@ -30,7 +30,7 @@ export class ContactsService {
         ...createContactDto,
         email: normalizedEmail(createContactDto.email),
       });
-      
+
       return await createdContact.save();
     } catch (error) {
       if (error.code === 11000) {

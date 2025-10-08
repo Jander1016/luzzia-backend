@@ -5,6 +5,7 @@ import { PricesService } from './prices.service';
 import { PricesController } from './prices.controller';
 import { Price, PriceSchema } from './entities/price.entity';
 import { PriceRepository } from './repositories/price.repository';
+import { PricesCron } from '../../shared/cron/prices.cron';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { PriceRepository } from './repositories/price.repository';
     HttpModule,
   ],
   controllers: [PricesController],
-  providers: [PricesService, PriceRepository],
-  exports: [PricesService, PriceRepository],
+  providers: [PricesService, PriceRepository, PricesCron],
+  exports: [PricesService, PriceRepository, PricesCron],
 })
 export class PricesModule {}

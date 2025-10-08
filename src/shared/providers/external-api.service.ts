@@ -13,7 +13,7 @@ export interface ApiProvider {
 @Injectable()
 export class ExternalApiService {
   private readonly logger = new Logger(ExternalApiService.name);
-  
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
@@ -32,7 +32,7 @@ export class ExternalApiService {
         url: this.configService.get<string>('alternativeApiUrl'),
         headers: this.getHeaders('ALTERNATIVE_API'),
         transform: this.transformAlternativeData,
-      }
+      },
     ];
   }
 
@@ -42,13 +42,17 @@ export class ExternalApiService {
     };
 
     // Soporte para diferentes tipos de autenticación
-    const apiKey = this.configService.get<string>(`${provider.toLowerCase()}ApiKey`);
-    const bearerToken = this.configService.get<string>(`${provider.toLowerCase()}BearerToken`);
-    
+    const apiKey = this.configService.get<string>(
+      `${provider.toLowerCase()}ApiKey`,
+    );
+    const bearerToken = this.configService.get<string>(
+      `${provider.toLowerCase()}BearerToken`,
+    );
+
     if (apiKey) {
       headers['X-API-Key'] = apiKey;
     }
-    
+
     if (bearerToken) {
       headers['Authorization'] = `Bearer ${bearerToken}`;
     }
@@ -59,23 +63,27 @@ export class ExternalApiService {
   async fetchPriceData(): Promise<any[]> {
     const providers = this.getApiProviders();
     const primaryProvider = providers[0]; // REE por defecto
-    
+
     try {
-      this.logger.log(`🔄 Fetching from primary provider: ${primaryProvider.name}`);
+      this.logger.log(
+        `🔄 Fetching from primary provider: ${primaryProvider.name}`,
+      );
       return await this.fetchFromProvider(primaryProvider);
     } catch (error) {
       this.logger.error(`❌ Primary provider failed: ${error.message}`);
-      
+
       // Intentar con providers alternativos
       for (let i = 1; i < providers.length; i++) {
         try {
           this.logger.log(`🔄 Trying fallback provider: ${providers[i].name}`);
           return await this.fetchFromProvider(providers[i]);
         } catch (fallbackError) {
-          this.logger.error(`❌ Fallback provider ${providers[i].name} failed: ${fallbackError.message}`);
+          this.logger.error(
+            `❌ Fallback provider ${providers[i].name} failed: ${fallbackError.message}`,
+          );
         }
       }
-      
+
       throw new Error('All API providers failed');
     }
   }

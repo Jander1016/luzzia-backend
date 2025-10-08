@@ -17,8 +17,8 @@ export interface CircuitBreakerOptions {
 
 enum CircuitState {
   CLOSED = 'closed',
-  OPEN = 'open', 
-  HALF_OPEN = 'half-open'
+  OPEN = 'open',
+  HALF_OPEN = 'half-open',
 }
 
 @Injectable()
@@ -33,7 +33,7 @@ export class ResilienceService {
 
   async executeWithRetry<T>(
     operation: () => Promise<T>,
-    options?: Partial<RetryOptions>
+    options?: Partial<RetryOptions>,
   ): Promise<T> {
     const config: RetryOptions = {
       maxRetries: this.configService.get<number>('maxRetries', 3),
@@ -45,45 +45,47 @@ export class ResilienceService {
     };
 
     let lastError: Error;
-    
+
     for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
       try {
         if (attempt > 0) {
           const delay = this.calculateDelay(attempt, config);
-          this.logger.log(`🔄 Retry attempt ${attempt}/${config.maxRetries} after ${delay}ms`);
+          this.logger.log(
+            `🔄 Retry attempt ${attempt}/${config.maxRetries} after ${delay}ms`,
+          );
           await this.sleep(delay);
         }
 
         const result = await this.executeWithCircuitBreaker(operation);
-        
+
         if (attempt > 0) {
           this.logger.log(`✅ Operation succeeded after ${attempt} retries`);
         }
-        
+
         return result;
       } catch (error) {
         lastError = error;
-        
+
         if (!config.retryCondition(error)) {
           this.logger.error(`❌ Non-retryable error: ${error.message}`);
           throw error;
         }
-        
+
         if (attempt === config.maxRetries) {
           this.logger.error(`❌ Max retries (${config.maxRetries}) exceeded`);
           break;
         }
-        
+
         this.logger.warn(`⚠️ Attempt ${attempt + 1} failed: ${error.message}`);
       }
     }
-    
+
     throw lastError;
   }
 
   async executeWithCircuitBreaker<T>(
     operation: () => Promise<T>,
-    options?: Partial<CircuitBreakerOptions>
+    options?: Partial<CircuitBreakerOptions>,
   ): Promise<T> {
     const config: CircuitBreakerOptions = {
       failureThreshold: 5,
@@ -115,7 +117,8 @@ export class ResilienceService {
   private onSuccess(): void {
     if (this.circuitState === CircuitState.HALF_OPEN) {
       this.successCount++;
-      if (this.successCount >= 2) { // Requerir 2 éxitos consecutivos
+      if (this.successCount >= 2) {
+        // Requerir 2 éxitos consecutivos
         this.circuitState = CircuitState.CLOSED;
         this.failureCount = 0;
         this.successCount = 0;
@@ -133,12 +136,15 @@ export class ResilienceService {
 
     if (this.failureCount >= config.failureThreshold) {
       this.circuitState = CircuitState.OPEN;
-      this.logger.error(`🚨 Circuit breaker OPEN - ${this.failureCount} failures detected`);
+      this.logger.error(
+        `🚨 Circuit breaker OPEN - ${this.failureCount} failures detected`,
+      );
     }
   }
 
   private calculateDelay(attempt: number, config: RetryOptions): number {
-    const exponentialDelay = config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
+    const exponentialDelay =
+      config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
     const jitteredDelay = exponentialDelay + Math.random() * 1000; // Añadir jitter
     return Math.min(jitteredDelay, config.maxDelay);
   }
@@ -147,16 +153,16 @@ export class ResilienceService {
     // Errores retryables típicos
     const retryableErrors = [
       'ECONNREFUSED',
-      'ENOTFOUND', 
+      'ENOTFOUND',
       'ETIMEDOUT',
       'ECONNRESET',
-      'EAI_AGAIN'
+      'EAI_AGAIN',
     ];
 
     const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
 
     return (
-      retryableErrors.some(code => error.code === code) ||
+      retryableErrors.some((code) => error.code === code) ||
       retryableStatusCodes.includes(error.response?.status) ||
       error.message?.includes('timeout') ||
       error.message?.includes('network')
@@ -164,7 +170,7 @@ export class ResilienceService {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   getCircuitBreakerStatus() {

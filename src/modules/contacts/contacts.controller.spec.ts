@@ -69,9 +69,13 @@ describe('ContactsController', () => {
     });
 
     it('should handle creation errors', async () => {
-      mockContactsService.create.mockRejectedValue(new Error('Email already exists'));
+      mockContactsService.create.mockRejectedValue(
+        new Error('Email already exists'),
+      );
 
-      await expect(controller.create(mockCreateContactDto)).rejects.toThrow('Email already exists');
+      await expect(controller.create(mockCreateContactDto)).rejects.toThrow(
+        'Email already exists',
+      );
     });
 
     it('should handle invalid email format', async () => {
@@ -80,9 +84,13 @@ describe('ContactsController', () => {
         email: 'invalid-email',
       };
 
-      mockContactsService.create.mockRejectedValue(new Error('Invalid email format'));
+      mockContactsService.create.mockRejectedValue(
+        new Error('Invalid email format'),
+      );
 
-      await expect(controller.create(invalidContactDto)).rejects.toThrow('Invalid email format');
+      await expect(controller.create(invalidContactDto)).rejects.toThrow(
+        'Invalid email format',
+      );
     });
   });
 
@@ -119,9 +127,13 @@ describe('ContactsController', () => {
     });
 
     it('should handle database errors', async () => {
-      mockContactsService.findAll.mockRejectedValue(new Error('Database connection failed'));
+      mockContactsService.findAll.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
-      await expect(controller.findAll()).rejects.toThrow('Database connection failed');
+      await expect(controller.findAll()).rejects.toThrow(
+        'Database connection failed',
+      );
     });
 
     it('should validate contact structure in response', async () => {

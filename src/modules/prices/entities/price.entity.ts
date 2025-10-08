@@ -1,11 +1,10 @@
-import { Document } from "mongoose";
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 @Schema({ timestamps: true })
 export class Price extends Document {
-
   @ApiProperty({ description: 'Fecha del precio (YYYY-MM-DD)' })
   @Prop({ required: true, index: true, type: Date })
   date: Date;

@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PricesService } from './prices.service';
 import { PriceResponseDto } from './dto/response-price.dto';
@@ -27,7 +34,9 @@ export class PricesController {
   @ApiOperation({ summary: 'Obtener histórico de precios' })
   @ApiQuery({ name: 'days', required: false, type: Number })
   @ApiResponse({ status: 200, type: [PriceResponseDto] })
-  async getHistory(@Query() query: HistoryQueryDto): Promise<PriceResponseDto[]> {
+  async getHistory(
+    @Query() query: HistoryQueryDto,
+  ): Promise<PriceResponseDto[]> {
     return this.pricesService.getPriceHistory(query.days);
   }
 
@@ -78,14 +87,17 @@ export class PricesController {
   @Post('fetch')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Forzar actualización de precios' })
-  @ApiResponse({ status: 200, description: 'Precios actualizados correctamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Precios actualizados correctamente',
+  })
   async fetchPrices(): Promise<{ message: string; saved: number }> {
     const prices = await this.pricesService.fetchFromExternalApi();
     const savedCount = await this.pricesService.savePrices(prices);
-    
-    return { 
-      message: 'Prices updated successfully', 
-      saved: savedCount 
+
+    return {
+      message: 'Prices updated successfully',
+      saved: savedCount,
     };
   }
 
@@ -95,16 +107,16 @@ export class PricesController {
   async getSystemHealth(): Promise<any> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const todayPrices = await this.pricesService.getTodayPrices();
     const yesterdayPrices = await this.pricesService.getPriceHistory(2);
-    const yesterdayCount = yesterdayPrices.filter(p => 
-      p.date.toDateString() === yesterday.toDateString()
+    const yesterdayCount = yesterdayPrices.filter(
+      (p) => p.date.toDateString() === yesterday.toDateString(),
     ).length;
-    
+
     return {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -115,14 +127,15 @@ export class PricesController {
           date: today.toISOString().split('T')[0],
           count: todayPrices.length,
           hasData: todayPrices.length > 0,
-          latestTimestamp: todayPrices.length > 0 ? todayPrices[0].timestamp : null
+          latestTimestamp:
+            todayPrices.length > 0 ? todayPrices[0].timestamp : null,
         },
         yesterday: {
           date: yesterday.toISOString().split('T')[0],
           count: yesterdayCount,
-          hasData: yesterdayCount > 0
-        }
-      }
+          hasData: yesterdayCount > 0,
+        },
+      },
     };
   }
 
@@ -141,7 +154,7 @@ export class PricesController {
     await this.pricesCron.forceDailyUpdate();
     return {
       message: 'Manual update triggered successfully',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }

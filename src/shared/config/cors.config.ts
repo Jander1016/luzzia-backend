@@ -24,7 +24,7 @@ export class CorsConfigService {
         'Authorization',
         'X-Requested-With',
         'Accept',
-        'Origin'
+        'Origin',
       ],
       credentials: true,
       optionsSuccessStatus: 200, // Para soportar navegadores legacy
@@ -39,8 +39,11 @@ export class CorsConfigService {
    */
   private createOriginHandler(
     allowedOrigins: string[],
-    isDevelopment: boolean
-  ): (origin: string, callback: (err: Error | null, allow?: boolean) => void) => void {
+    isDevelopment: boolean,
+  ): (
+    origin: string,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => void {
     return (origin, callback) => {
       // Permitir requests sin origin (apps móviles, Postman)
       if (!origin) return callback(null, true);
@@ -51,7 +54,7 @@ export class CorsConfigService {
       } else {
         this.logger.debug(`🔒 CORS check for origin: ${allowedOrigins}`);
         this.logger.warn(`🚫 CORS blocked origin: ${origin}`);
-        
+
         // En desarrollo, permitir todos los origins
         if (isDevelopment) {
           this.logger.debug(`🔧 Development mode: allowing origin ${origin}`);
@@ -71,9 +74,13 @@ export class CorsConfigService {
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     if (isDevelopment) {
-      this.logger.log('🔒 CORS enabled in development mode - all origins allowed');
+      this.logger.log(
+        '🔒 CORS enabled in development mode - all origins allowed',
+      );
     } else {
-      this.logger.log(`🔒 CORS enabled for origins: ${allowedOrigins ? allowedOrigins.join(', ') : 'none'}`);
+      this.logger.log(
+        `🔒 CORS enabled for origins: ${allowedOrigins ? allowedOrigins.join(', ') : 'none'}`,
+      );
     }
   }
 }

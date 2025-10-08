@@ -132,12 +132,12 @@ describe('PricesService', () => {
 
     it('should fetch from database and cache result when no cache available', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
-      
+
       const mockQuery = {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       jest.spyOn(priceModel, 'find').mockReturnValue(mockQuery);
       jest.spyOn(cacheManager, 'set').mockResolvedValue(undefined);
 
@@ -147,7 +147,7 @@ describe('PricesService', () => {
       expect(cacheManager.set).toHaveBeenCalledWith(
         'today_prices',
         expect.any(Array),
-        1000 * 60 * 60 * 6
+        1000 * 60 * 60 * 6,
       );
       expect(result).toHaveLength(3);
       expect(result[0]).toHaveProperty('date');
@@ -157,12 +157,12 @@ describe('PricesService', () => {
 
     it('should handle empty results from database', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
-      
+
       const mockQuery = {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue([]),
       };
-      
+
       jest.spyOn(priceModel, 'find').mockReturnValue(mockQuery);
       jest.spyOn(cacheManager, 'set').mockResolvedValue(undefined);
 
@@ -194,7 +194,9 @@ describe('PricesService', () => {
 
     it('should fetch from repository when no cache available', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
-      jest.spyOn(priceRepository, 'findTomorrowPrices').mockResolvedValue(mockPriceData);
+      jest
+        .spyOn(priceRepository, 'findTomorrowPrices')
+        .mockResolvedValue(mockPriceData);
       jest.spyOn(cacheManager, 'set').mockResolvedValue(undefined);
 
       const result = await service.getTomorrowPrices();
@@ -203,7 +205,7 @@ describe('PricesService', () => {
       expect(cacheManager.set).toHaveBeenCalledWith(
         'tomorrow_prices',
         expect.any(Array),
-        1000 * 60 * 60 * 12
+        1000 * 60 * 60 * 12,
       );
       expect(result).toHaveLength(3);
     });
@@ -240,7 +242,7 @@ describe('PricesService', () => {
 
     it('should calculate stats from today prices when no cache available', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
-      
+
       // Mock getTodayPrices to return test data
       jest.spyOn(service, 'getTodayPrices').mockResolvedValue([
         {
@@ -273,7 +275,7 @@ describe('PricesService', () => {
       expect(cacheManager.set).toHaveBeenCalledWith(
         'dashboard_stats',
         expect.any(Object),
-        1000 * 60 * 60 * 1
+        1000 * 60 * 60 * 1,
       );
     });
   });
@@ -284,7 +286,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       jest.spyOn(priceModel, 'find').mockReturnValue(mockQuery);
 
       const result = await service.getHourlyPrices('today');
@@ -306,7 +308,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue([]),
       };
-      
+
       jest.spyOn(priceModel, 'find').mockReturnValue(mockQuery);
 
       const result = await service.getHourlyPrices('today');
@@ -324,7 +326,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       jest.spyOn(priceModel, 'find').mockReturnValue(mockQuery);
 
       const result = await service.getHourlyPrices('week');
@@ -382,7 +384,8 @@ describe('PricesService', () => {
 
       expect(result).toEqual({
         recommendations: [],
-        dailyTip: 'No hay datos de precios disponibles para generar recomendaciones.',
+        dailyTip:
+          'No hay datos de precios disponibles para generar recomendaciones.',
       });
     });
   });
@@ -396,13 +399,15 @@ describe('PricesService', () => {
         return null;
       });
 
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({ data: mockREEApiResponse } as any)
-      );
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: mockREEApiResponse } as any));
 
       const result = await service.fetchFromExternalApi();
 
-      expect(httpService.get).toHaveBeenCalledWith('https://api.esios.ree.es/test');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'https://api.esios.ree.es/test',
+      );
       expect(Array.isArray(result)).toBe(true);
       expect(result).toHaveLength(3);
       expect(result[0]).toHaveProperty('date');
@@ -414,7 +419,7 @@ describe('PricesService', () => {
       jest.spyOn(configService, 'get').mockReturnValue(null);
 
       await expect(service.fetchFromExternalApi()).rejects.toThrow(
-        'REE API URL not configured'
+        'REE API URL not configured',
       );
     });
   });
@@ -450,7 +455,9 @@ describe('PricesService', () => {
         },
       ];
 
-      jest.spyOn(priceModel, 'findOneAndUpdate').mockRejectedValue(new Error('DB Error'));
+      jest
+        .spyOn(priceModel, 'findOneAndUpdate')
+        .mockRejectedValue(new Error('DB Error'));
 
       const result = await service.savePrices(mockPrices);
 
@@ -464,7 +471,7 @@ describe('PricesService', () => {
         sort: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockPriceData),
       };
-      
+
       jest.spyOn(priceModel, 'find').mockReturnValue(mockQuery);
 
       const result = await service.getPriceHistory(7);
@@ -489,7 +496,9 @@ describe('PricesService', () => {
         },
       ];
 
-      jest.spyOn(priceModel, 'aggregate').mockResolvedValue(mockAggregateResult);
+      jest
+        .spyOn(priceModel, 'aggregate')
+        .mockResolvedValue(mockAggregateResult);
 
       const result = await service.getPriceStats(7);
 

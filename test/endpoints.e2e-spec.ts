@@ -22,20 +22,22 @@ describe('Prices & Contacts API (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-    .overrideProvider('DATABASE_CONNECTION')
-    .useFactory({
-      factory: () => MongooseModule.forRoot(mongoUri),
-    })
-    .compile();
+      .overrideProvider('DATABASE_CONNECTION')
+      .useFactory({
+        factory: () => MongooseModule.forRoot(mongoUri),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Configurar pipes de validación
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
 
     // Configurar prefijo API
     app.setGlobalPrefix('api/v1');
@@ -62,14 +64,14 @@ describe('Prices & Contacts API (e2e)', () => {
           .expect(200);
 
         expect(Array.isArray(response.body)).toBe(true);
-        
+
         if (response.body.length > 0) {
           expect(response.body[0]).toHaveProperty('date');
           expect(response.body[0]).toHaveProperty('hour');
           expect(response.body[0]).toHaveProperty('price');
           expect(response.body[0]).toHaveProperty('isFallback');
           expect(response.body[0]).toHaveProperty('timestamp');
-          
+
           expect(typeof response.body[0].hour).toBe('number');
           expect(typeof response.body[0].price).toBe('number');
           expect(typeof response.body[0].isFallback).toBe('boolean');
@@ -96,7 +98,7 @@ describe('Prices & Contacts API (e2e)', () => {
           .expect(200);
 
         expect(Array.isArray(response.body)).toBe(true);
-        
+
         if (response.body.length > 0) {
           expect(response.body[0]).toHaveProperty('date');
           expect(response.body[0]).toHaveProperty('hour');
@@ -133,7 +135,9 @@ describe('Prices & Contacts API (e2e)', () => {
           .get('/api/v1/prices/dashboard-stats')
           .expect(200);
 
-        expect(response.body.priceChangePercentage).toBeGreaterThanOrEqual(-100);
+        expect(response.body.priceChangePercentage).toBeGreaterThanOrEqual(
+          -100,
+        );
         expect(response.body.priceChangePercentage).toBeLessThanOrEqual(1000);
         expect(response.body.monthlySavings).toBeGreaterThanOrEqual(-100);
         expect(response.body.monthlySavings).toBeLessThanOrEqual(100);
@@ -162,8 +166,10 @@ describe('Prices & Contacts API (e2e)', () => {
           expect(response.body.prices[0]).toHaveProperty('price');
           expect(response.body.prices[0]).toHaveProperty('level');
           expect(response.body.prices[0]).toHaveProperty('currency');
-          
-          expect(['bajo', 'medio', 'alto', 'muy-alto']).toContain(response.body.prices[0].level);
+
+          expect(['bajo', 'medio', 'alto', 'muy-alto']).toContain(
+            response.body.prices[0].level,
+          );
           expect(response.body.prices[0].currency).toBe('EUR');
         }
       });
@@ -216,7 +222,7 @@ describe('Prices & Contacts API (e2e)', () => {
           expect(recommendation).toHaveProperty('description');
           expect(recommendation).toHaveProperty('appliance');
           expect(recommendation).toHaveProperty('savingsPercentage');
-          
+
           expect(typeof recommendation.savingsPercentage).toBe('number');
           expect(recommendation.savingsPercentage).toBeGreaterThanOrEqual(0);
           expect(recommendation.savingsPercentage).toBeLessThanOrEqual(100);
@@ -231,7 +237,7 @@ describe('Prices & Contacts API (e2e)', () => {
           .expect(200);
 
         expect(Array.isArray(response.body)).toBe(true);
-        
+
         if (response.body.length > 0) {
           expect(response.body[0]).toHaveProperty('date');
           expect(response.body[0]).toHaveProperty('hour');
@@ -263,13 +269,13 @@ describe('Prices & Contacts API (e2e)', () => {
           .expect(200);
 
         expect(Array.isArray(response.body)).toBe(true);
-        
+
         if (response.body.length > 0) {
           expect(response.body[0]).toHaveProperty('_id');
           expect(response.body[0]).toHaveProperty('avgPrice');
           expect(response.body[0]).toHaveProperty('minPrice');
           expect(response.body[0]).toHaveProperty('maxPrice');
-          
+
           expect(typeof response.body[0].avgPrice).toBe('number');
           expect(typeof response.body[0].minPrice).toBe('number');
           expect(typeof response.body[0].maxPrice).toBe('number');
@@ -288,8 +294,9 @@ describe('Prices & Contacts API (e2e)', () => {
     describe('POST /api/v1/prices/fetch', () => {
       it('should fetch and save prices (may fail due to external API)', async () => {
         // Este test puede fallar si la API externa no está disponible
-        const response = await request(app.getHttpServer())
-          .post('/api/v1/prices/fetch');
+        const response = await request(app.getHttpServer()).post(
+          '/api/v1/prices/fetch',
+        );
 
         // Permitir tanto éxito (200) como error (500) ya que depende de API externa
         if (response.status === 200) {
@@ -318,7 +325,10 @@ describe('Prices & Contacts API (e2e)', () => {
 
         expect(response.body).toHaveProperty('_id');
         expect(response.body).toHaveProperty('name', testContact.name);
-        expect(response.body).toHaveProperty('email', testContact.email.toLowerCase());
+        expect(response.body).toHaveProperty(
+          'email',
+          testContact.email.toLowerCase(),
+        );
       });
 
       it('should not create contact with duplicate email', async () => {
@@ -385,19 +395,15 @@ describe('Prices & Contacts API (e2e)', () => {
     describe('GET /api/v1/contacts', () => {
       it('should return all contacts', async () => {
         // Crear algunos contactos primero
-        await request(app.getHttpServer())
-          .post('/api/v1/contacts')
-          .send({
-            name: 'Contact 1',
-            email: 'contact1@example.com',
-          });
+        await request(app.getHttpServer()).post('/api/v1/contacts').send({
+          name: 'Contact 1',
+          email: 'contact1@example.com',
+        });
 
-        await request(app.getHttpServer())
-          .post('/api/v1/contacts')
-          .send({
-            name: 'Contact 2',
-            email: 'contact2@example.com',
-          });
+        await request(app.getHttpServer()).post('/api/v1/contacts').send({
+          name: 'Contact 2',
+          email: 'contact2@example.com',
+        });
 
         const response = await request(app.getHttpServer())
           .get('/api/v1/contacts')
@@ -405,7 +411,7 @@ describe('Prices & Contacts API (e2e)', () => {
 
         expect(Array.isArray(response.body)).toBe(true);
         expect(response.body.length).toBeGreaterThanOrEqual(2);
-        
+
         if (response.body.length > 0) {
           expect(response.body[0]).toHaveProperty('_id');
           expect(response.body[0]).toHaveProperty('name');
@@ -455,7 +461,9 @@ describe('Prices & Contacts API (e2e)', () => {
         .get('/api/v1/prices/today')
         .expect(200);
 
-      expect(response.headers).toHaveProperty('access-control-allow-credentials');
+      expect(response.headers).toHaveProperty(
+        'access-control-allow-credentials',
+      );
     });
   });
 

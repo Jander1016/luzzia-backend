@@ -21,16 +21,16 @@ export class AppBootstrapService {
   async configureApp(app: INestApplication): Promise<void> {
     // Configurar CORS
     this.setupCors(app);
-    
+
     // Configurar prefijo global
     this.setupGlobalPrefix(app);
-    
+
     // Configurar validación global
     this.setupGlobalValidation(app);
-    
+
     // Configurar Swagger
     this.setupSwagger(app);
-    
+
     // Log de configuración
     this.logConfiguration();
   }
@@ -41,9 +41,9 @@ export class AppBootstrapService {
    */
   async startApp(app: INestApplication): Promise<void> {
     const port = this.configService.get<number>('port');
-    
+
     await app.listen(port);
-    
+
     this.logStartupInfo(port);
   }
 
