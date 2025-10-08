@@ -49,6 +49,7 @@ export class CorsConfigService {
       if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
+        this.logger.debug(`🔒 CORS check for origin: ${allowedOrigins}`);
         this.logger.warn(`🚫 CORS blocked origin: ${origin}`);
         
         // En desarrollo, permitir todos los origins
