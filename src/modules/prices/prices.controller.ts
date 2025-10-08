@@ -6,11 +6,15 @@ import { HistoryQueryDto } from './dto/history-query-price.dto';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import { HourlyPricesResponseDto } from './dto/hourly-prices.dto';
 import { RecommendationsResponseDto } from './dto/recommendations.dto';
+import { PricesCron } from '../../shared/cron/prices.cron';
 
 @ApiTags('Prices')
 @Controller('prices')
 export class PricesController {
-  constructor(private readonly pricesService: PricesService) {}
+  constructor(
+    private readonly pricesService: PricesService,
+    private readonly pricesCron: PricesCron,
+  ) {}
 
   @Get('today')
   @ApiOperation({ summary: 'Obtener precios del día actual' })
@@ -119,6 +123,25 @@ export class PricesController {
           hasData: yesterdayCount > 0
         }
       }
+    };
+  }
+
+  @Get('cron/status')
+  @ApiOperation({ summary: 'Obtener estado del CRON de precios' })
+  @ApiResponse({ status: 200, description: 'Estado del CRON' })
+  async getCronStatus(): Promise<any> {
+    return this.pricesCron.getCronStatus();
+  }
+
+  @Post('cron/trigger')
+  @ApiOperation({ summary: 'Disparar manualmente la actualización de precios' })
+  @ApiResponse({ status: 200, description: 'Actualización completada' })
+  @HttpCode(HttpStatus.OK)
+  async triggerManualUpdate(): Promise<{ message: string; timestamp: string }> {
+    await this.pricesCron.forceDailyUpdate();
+    return {
+      message: 'Manual update triggered successfully',
+      timestamp: new Date().toISOString()
     };
   }
 }

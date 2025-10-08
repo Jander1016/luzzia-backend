@@ -8,6 +8,9 @@ import { PricesService } from '../../modules/prices/prices.service';
 export class PricesCron {
   private readonly logger = new Logger(PricesCron.name);
   private hasRetried = false;
+  private lastExecution: Date | null = null;
+  private lastSuccessfulExecution: Date | null = null;
+  private cronStatus: 'active' | 'error' | 'inactive' = 'inactive';
 
   constructor(
     private readonly pricesService: PricesService,
@@ -26,47 +29,84 @@ export class PricesCron {
                     'Europe/Madrid';
     
     this.logger.log(`🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`);
+    this.logger.log(`🌍 Current server time: ${new Date().toISOString()}`);
+    this.logger.log(`🌍 Madrid time: ${new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`);
     
-    // Cron job principal usando la variable de entorno
-    const mainCronJob = new CronJob(
-      cronSchedule,
-      () => this.handleDailyPriceUpdate(),
-      null,
-      true,
-      timeZone
-    );
-    
-    // Cron job de reintento a las 23:15
-    const retryCronJob = new CronJob(
-      '15 23 * * *',
-      () => this.handleRetryPriceUpdate(),
-      null,
-      true,
-      timeZone
-    );
-    
-    // Cron job de reset diario a medianoche
-    const resetCronJob = new CronJob(
-      '0 0 * * *',
-      () => this.resetDailyFlag(),
-      null,
-      true,
-      timeZone
-    );
-    
-    // Registrar los cron jobs
-    this.schedulerRegistry.addCronJob('mainPriceUpdate', mainCronJob);
-    this.schedulerRegistry.addCronJob('retryPriceUpdate', retryCronJob);
-    this.schedulerRegistry.addCronJob('resetDailyFlag', resetCronJob);
+    try {
+      // Cron job principal usando la variable de entorno
+      const mainCronJob = new CronJob(
+        cronSchedule,
+        () => this.handleDailyPriceUpdate(),
+        null,
+        true,
+        timeZone
+      );
+      
+      // Cron job de reintento a las 23:15
+      const retryCronJob = new CronJob(
+        '15 23 * * *',
+        () => this.handleRetryPriceUpdate(),
+        null,
+        true,
+        timeZone
+      );
+      
+      // Cron job de reset diario a medianoche
+      const resetCronJob = new CronJob(
+        '0 0 * * *',
+        () => this.resetDailyFlag(),
+        null,
+        true,
+        timeZone
+      );
+
+      // Cron job de verificación cada 6 horas (backup automático)
+      const backupCronJob = new CronJob(
+        '0 */6 * * *', // Cada 6 horas
+        () => this.handleBackupCheck(),
+        null,
+        true,
+        timeZone
+      );
+      
+      // Registrar los cron jobs
+      this.schedulerRegistry.addCronJob('mainPriceUpdate', mainCronJob);
+      this.schedulerRegistry.addCronJob('retryPriceUpdate', retryCronJob);
+      this.schedulerRegistry.addCronJob('resetDailyFlag', resetCronJob);
+      this.schedulerRegistry.addCronJob('backupCheck', backupCronJob);
+      
+      this.cronStatus = 'active';
+      this.logger.log(`✅ CRON jobs registered successfully`);
+      this.logger.log(`📅 Next main execution: ${mainCronJob.nextDate()?.toString()}`);
+      this.logger.log(`📅 Next retry execution: ${retryCronJob.nextDate()?.toString()}`);
+      this.logger.log(`📅 Next reset execution: ${resetCronJob.nextDate()?.toString()}`);
+      this.logger.log(`📅 Next backup check: ${backupCronJob.nextDate()?.toString()}`);
+      
+    } catch (error) {
+      this.cronStatus = 'error';
+      this.logger.error(`❌ Failed to setup CRON jobs: ${error.message}`, error.stack);
+    }
   }
 
   // Método principal de actualización de precios
   async handleDailyPriceUpdate() {
+    this.lastExecution = new Date();
     const cronSchedule = this.configService.get<string>('cron.mainSchedule') || 
                         this.configService.get<string>('cronSchedule') || 
                         '15 20 * * *';
     this.logger.log(`📊 Starting daily price update with schedule: ${cronSchedule}`);
-    await this.updatePrices();
+    this.logger.log(`🕐 Execution time: ${this.lastExecution.toISOString()}`);
+    this.logger.log(`🌍 Madrid time: ${this.lastExecution.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`);
+    
+    try {
+      await this.updatePrices();
+      this.lastSuccessfulExecution = new Date();
+      this.cronStatus = 'active';
+      this.logger.log(`✅ CRON execution completed successfully at ${this.lastSuccessfulExecution.toISOString()}`);
+    } catch (error) {
+      this.cronStatus = 'error';
+      this.logger.error(`❌ CRON execution failed: ${error.message}`, error.stack);
+    }
   }
 
   // Reintento a las 23:15 solo si no hay datos del día actual
@@ -81,6 +121,32 @@ export class PricesCron {
 
     this.logger.log('⚠️ No data found for today, starting retry at 23:15');
     await this.updatePrices();
+  }
+
+  // Verificación de backup cada 6 horas
+  async handleBackupCheck() {
+    this.logger.log('🔍 Starting backup check');
+    
+    try {
+      // Verificar si tenemos datos de hoy
+      const todayPrices = await this.pricesService.getTodayPrices();
+      
+      // Si no tenemos datos de hoy y ya pasaron las 21:00, intentar obtenerlos
+      const now = new Date();
+      const madridTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+      const currentHour = madridTime.getHours();
+      
+      if ((!todayPrices || todayPrices.length === 0) && currentHour >= 21) {
+        this.logger.warn('⚠️ Missing today data after 21:00, triggering backup fetch');
+        await this.updatePrices();
+      } else if (todayPrices && todayPrices.length > 0) {
+        this.logger.log(`✅ Backup check: ${todayPrices.length} prices found for today`);
+      } else {
+        this.logger.log(`ℹ️ Backup check: No data yet, but it's only ${currentHour}:00 Madrid time`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Backup check failed: ${error.message}`, error.stack);
+    }
   }
 
   private async updatePrices(): Promise<void> {
@@ -145,5 +211,50 @@ export class PricesCron {
   resetDailyFlag() {
     this.hasRetried = false;
     this.logger.log('🔄 New day started - flags reset');
+  }
+
+  // Método público para obtener el estado del CRON
+  getCronStatus() {
+    const mainCron = this.schedulerRegistry.getCronJob('mainPriceUpdate');
+    const retryCron = this.schedulerRegistry.getCronJob('retryPriceUpdate');
+    const resetCron = this.schedulerRegistry.getCronJob('resetDailyFlag');
+    const backupCron = this.schedulerRegistry.getCronJob('backupCheck');
+
+    return {
+      status: this.cronStatus,
+      lastExecution: this.lastExecution,
+      lastSuccessfulExecution: this.lastSuccessfulExecution,
+      hasRetried: this.hasRetried,
+      cronJobs: {
+        mainPriceUpdate: {
+          nextExecution: mainCron.nextDate()?.toString(),
+          lastDate: mainCron.lastDate()?.toString(),
+        },
+        retryPriceUpdate: {
+          nextExecution: retryCron.nextDate()?.toString(),
+          lastDate: retryCron.lastDate()?.toString(),
+        },
+        resetDailyFlag: {
+          nextExecution: resetCron.nextDate()?.toString(),
+          lastDate: resetCron.lastDate()?.toString(),
+        },
+        backupCheck: {
+          nextExecution: backupCron.nextDate()?.toString(),
+          lastDate: backupCron.lastDate()?.toString(),
+        }
+      },
+      serverTime: new Date().toISOString(),
+      madridTime: new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }),
+      configuration: {
+        mainSchedule: this.configService.get<string>('cron.mainSchedule') || '15 20 * * *',
+        timezone: this.configService.get<string>('cron.timezone') || 'Europe/Madrid',
+      }
+    };
+  }
+
+  // Método para forzar ejecución manual (para testing)
+  async forceDailyUpdate() {
+    this.logger.log('🔧 Manual execution triggered');
+    await this.handleDailyPriceUpdate();
   }
 }
