@@ -3,41 +3,42 @@ import { IsNumber } from 'class-validator';
 
 export class DashboardStatsDto {
   @ApiProperty({
-    description: 'Current price in €/kWh',
+    description: 'Precio actual en €/kWh',
     example: 0.2,
   })
   @IsNumber()
   currentPrice: number;
 
   @ApiProperty({
-    description: 'Next hour price in €/kWh',
+    description: 'Precio más bajo del día en €/kWh',
+    example: 0.08,
+  })
+  @IsNumber()
+  minPrice: number;
+
+  @ApiProperty({
+    description: 'Hora exacta del precio más bajo (0-23)',
+    example: 3,
+  })
+  @IsNumber()
+  minPriceHour: number;
+
+  @ApiProperty({
+    description: 'Precio más alto del día en €/kWh',
     example: 0.25,
   })
   @IsNumber()
-  nextHourPrice: number;
+  maxPrice: number;
 
   @ApiProperty({
-    description: '% change in price',
-    example: 5,
+    description: 'Hora exacta del precio más alto (0-23)',
+    example: 19,
   })
   @IsNumber()
-  priceChangePercentage: number;
+  maxPriceHour: number;
 
   @ApiProperty({
-    description: '% monthly savings',
-    example: 10,
-  })
-  @IsNumber()
-  monthlySavings: number;
-
-  @ApiProperty({
-    description: 'Comparison type',
-    example: 'tarifa fija',
-  })
-  comparisonType: string;
-
-  @ApiProperty({
-    description: 'Last updated timestamp in ISO format',
+    description: 'Última actualización en formato ISO',
     example: '2024-06-01T12:00:00Z',
   })
   lastUpdated: string;

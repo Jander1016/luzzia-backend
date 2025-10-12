@@ -25,18 +25,15 @@ export class PricesCron {
       this.configService.get<string>('cron.mainSchedule') ||
       this.configService.get<string>('cronSchedule') ||
       '15 20 * * *';
+
     const timeZone =
       this.configService.get<string>('cron.timezone') ||
       this.configService.get<string>('timeZone') ||
       'Europe/Madrid';
 
-    this.logger.log(
-      `🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`,
-    );
+    this.logger.log(`🕐 Setting up cron job with schedule: ${cronSchedule} (${timeZone})`);
     this.logger.log(`🌍 Current server time: ${new Date().toISOString()}`);
-    this.logger.log(
-      `🌍 Madrid time: ${new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`,
-    );
+    this.logger.log(`🌍 Madrid time: ${new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`);
 
     try {
       // Cron job principal usando la variable de entorno
@@ -120,12 +117,27 @@ export class PricesCron {
     );
 
     try {
-      await this.updatePrices();
-      this.lastSuccessfulExecution = new Date();
-      this.cronStatus = 'active';
-      this.logger.log(
-        `✅ CRON execution completed successfully at ${this.lastSuccessfulExecution.toISOString()}`,
-      );
+      // Verificar si hay datos de mañana
+      const tomorrowPrices = await this.pricesService.getTomorrowPrices();
+      if (tomorrowPrices && tomorrowPrices.length > 0) {
+        // Guardar los datos de mañana en la base de datos
+        const savedCount = await this.pricesService.savePrices(tomorrowPrices);
+        this.logger.log(`✅ Saved ${savedCount} prices for tomorrow.`);
+        this.lastSuccessfulExecution = new Date();
+        this.cronStatus = 'active';
+        this.logger.log(
+          `✅ CRON execution completed successfully at ${this.lastSuccessfulExecution.toISOString()}`,
+        );
+        // Desactivar el cron de reintento porque ya se guardaron los datos
+        try {
+          this.schedulerRegistry.deleteCronJob('retryPriceUpdate');
+          this.logger.log('🛑 Retry cron job disabled (data found and saved on first run)');
+        } catch (e) {
+          this.logger.warn('No retry cron job to disable or already removed.');
+        }
+      } else {
+        this.logger.log('⏳ No data for tomorrow found, nothing saved. Waiting for retry cron.');
+      }
     } catch (error) {
       this.cronStatus = 'error';
       this.logger.error(

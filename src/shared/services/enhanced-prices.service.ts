@@ -205,12 +205,28 @@ export class EnhancedPricesService {
         todayPrices.reduce((sum, p) => sum + p.price, 0) / todayPrices.length;
       const monthlySavings = ((fixedTariff - avgPrice) / fixedTariff) * 100;
 
+      // Calcular precio más bajo y más alto del día
+      let minPrice = todayPrices[0].price;
+      let minPriceHour = todayPrices[0].hour;
+      let maxPrice = todayPrices[0].price;
+      let maxPriceHour = todayPrices[0].hour;
+      for (const p of todayPrices) {
+        if (p.price < minPrice) {
+          minPrice = p.price;
+          minPriceHour = p.hour;
+        }
+        if (p.price > maxPrice) {
+          maxPrice = p.price;
+          maxPriceHour = p.hour;
+        }
+      }
+
       const result = {
         currentPrice,
-        nextHourPrice,
-        priceChangePercentage: Math.round(priceChangePercentage * 100) / 100,
-        monthlySavings: Math.round(monthlySavings * 100) / 100,
-        comparisonType: 'tarifa fija',
+        minPrice,
+        minPriceHour,
+        maxPrice,
+        maxPriceHour,
         lastUpdated: new Date().toISOString(),
       };
 
@@ -218,7 +234,10 @@ export class EnhancedPricesService {
       this.logger.logPerformance('get_dashboard_stats', duration);
       this.logger.logBusinessEvent('dashboard_stats_completed', {
         currentPrice,
-        priceChangePercentage: result.priceChangePercentage,
+        minPrice,
+        minPriceHour,
+        maxPrice,
+        maxPriceHour,
       });
 
       return result;

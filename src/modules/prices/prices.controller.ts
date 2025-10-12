@@ -18,6 +18,19 @@ import { PricesCron } from '../../shared/cron/prices.cron';
 @ApiTags('Prices')
 @Controller('prices')
 export class PricesController {
+  @Get('monthly-averages')
+  @ApiOperation({ summary: 'Obtener precios promedio por mes del año actual' })
+  @ApiResponse({ status: 200, description: 'Lista de promedios mensuales' })
+  async getMonthlyAverages(): Promise<{ month: number; avgPrice: number }[]> {
+    return this.pricesService.getMonthlyAverages();
+  }
+
+  @Get('weekly-averages')
+  @ApiOperation({ summary: 'Obtener precios promedio por semana del año actual' })
+  @ApiResponse({ status: 200, description: 'Lista de promedios semanales' })
+  async getWeeklyAverages(): Promise<{ week: number; avgPrice: number }[]> {
+    return this.pricesService.getWeeklyAverages();
+  }
   constructor(
     private readonly pricesService: PricesService,
     private readonly pricesCron: PricesCron,
@@ -62,20 +75,7 @@ export class PricesController {
     return this.pricesService.getDashboardStats();
   }
 
-  @Get('hourly')
-  @ApiOperation({ summary: 'Obtener precios por horas según período' })
-  @ApiQuery({
-    name: 'period',
-    required: false,
-    enum: ['today', 'week', 'month'],
-    description: 'Período para obtener precios por horas',
-  })
-  @ApiResponse({ status: 200, type: HourlyPricesResponseDto })
-  async getHourlyPrices(
-    @Query('period') period: 'today' | 'week' | 'month' = 'today',
-  ): Promise<HourlyPricesResponseDto> {
-    return this.pricesService.getHourlyPrices(period);
-  }
+  // ...existing code...
 
   @Get('recommendations')
   @ApiOperation({ summary: 'Obtener recomendaciones de uso energético' })
