@@ -11,10 +11,10 @@ import { catchError, firstValueFrom } from 'rxjs';
 import { PriceResponseDto } from './dto/response-price.dto';
 import { PriceRepository } from './repositories/price.repository';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
-import {
-  HourlyPricesResponseDto,
-  HourlyPriceDto,
-} from './dto/hourly-prices.dto';
+// import {
+//   HourlyPricesResponseDto,
+//   HourlyPriceDto,
+// } from './dto/hourly-prices.dto';
 import {
   RecommendationsResponseDto,
   RecommendationDto,
