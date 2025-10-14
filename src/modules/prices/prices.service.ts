@@ -19,6 +19,7 @@ import {
   RecommendationsResponseDto,
   RecommendationDto,
 } from './dto/recommendations.dto';
+import { DailyAverageDto } from './dto/daily-averages.dto';
 
 interface PvpcEntry {
   date: string; // fecha en formato YYYY-MM-DD
@@ -377,7 +378,7 @@ export class PricesService {
       lastUpdated,
     };
 
-    // Guardar en caché por 1 hora (se actualizan con frecuencia por la hora actual)
+    // Guardar en caché por 1 hora (se actualizan con frecuencia por la hora current)
     await this.cacheManager.set(cacheKey, stats, 1000 * 60 * 60 * 1);
     this.logger.log(`💾 Cached dashboard stats`);
 
@@ -479,5 +480,29 @@ export class PricesService {
     } catch (error) {
       this.logger.error('Error clearing cache:', error);
     }
+  }
+
+  async getDailyAverages(month: number, year: number): Promise<DailyAverageDto[]> {
+    const start = new Date(Date.UTC(year, month - 1, 1));
+    const end = new Date(Date.UTC(year, month, 1));
+    const stats = await this.priceModel.aggregate([
+      { $match: { date: { $gte: start, $lt: end } } },
+      { $group: { _id: { $dayOfMonth: '$date' }, avgPrice: { $avg: '$price' } } },
+      { $sort: { _id: 1 } }
+    ]);
+    // Obtener cantidad de días del mes
+    const daysInMonth = new Date(year, month, 0).getDate();
+    // Mapear todos los días del mes
+    const result: DailyAverageDto[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const stat = stats.find(s => s._id === day);
+      result.push({
+        day,
+        month,
+        year,
+        avgPrice: stat ? stat.avgPrice : 0
+      });
+    }
+    return result;
   }
 }

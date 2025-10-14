@@ -11,9 +11,11 @@ import { PricesService } from './prices.service';
 import { PriceResponseDto } from './dto/response-price.dto';
 import { HistoryQueryDto } from './dto/history-query-price.dto';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
-import { HourlyPricesResponseDto } from './dto/hourly-prices.dto';
+// import { HourlyPricesResponseDto } from './dto/hourly-prices.dto';
 import { RecommendationsResponseDto } from './dto/recommendations.dto';
 import { PricesCron } from '../../shared/cron/prices.cron';
+import { DailyAverageDto } from './dto/daily-averages.dto';
+import { DailyAveragesQueryDto } from './dto/daily-averages-query.dto';
 
 @ApiTags('Prices')
 @Controller('prices')
@@ -74,8 +76,6 @@ export class PricesController {
   async getDashboardStats(): Promise<DashboardStatsDto> {
     return this.pricesService.getDashboardStats();
   }
-
-  // ...existing code...
 
   @Get('recommendations')
   @ApiOperation({ summary: 'Obtener recomendaciones de uso energético' })
@@ -156,5 +156,17 @@ export class PricesController {
       message: 'Manual update triggered successfully',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('daily-averages')
+  @ApiOperation({ summary: 'Obtener precios promedio diario del mes actual o indicado' })
+  @ApiResponse({ status: 200, type: [DailyAverageDto] })
+  async getDailyAverages(
+    @Query() query: DailyAveragesQueryDto,
+  ): Promise<DailyAverageDto[]> {
+    const now = new Date();
+    const month = query.month ?? now.getMonth() + 1;
+    const year = query.year ?? now.getFullYear();
+    return this.pricesService.getDailyAverages(month, year);
   }
 }
