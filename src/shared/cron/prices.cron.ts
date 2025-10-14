@@ -136,7 +136,9 @@ export class PricesCron {
           this.logger.warn('No retry cron job to disable or already removed.');
         }
       } else {
-        this.logger.log('⏳ No data for tomorrow found, nothing saved. Waiting for retry cron.');
+        const prices = await this.pricesService.fetchFromExternalApi();
+        const savedCount = await this.pricesService.savePrices(prices);
+        this.logger.log(`⏳ No data for tomorrow found, fetched ${savedCount} prices from external API.`);
       }
     } catch (error) {
       this.cronStatus = 'error';
